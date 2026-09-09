@@ -14,10 +14,10 @@ export default function Home() {
               eco vous accompagne pour une meilleure gestion de vos finances.
             </p>
             <div className="flex justify-center items-center">
-              <Link href={""} className="btn btn-sm md:btn-md btn-outline btn-accent">
+              <Link href={"/sign-in"} className="btn btn-sm md:btn-md btn-outline btn-accent">
                 Se connecter
               </Link>
-              <Link href={""} className="btn btn-sm md:btn-md btn-accent ml-2">
+              <Link href={"/sign-up"} className="btn btn-sm md:btn-md btn-accent ml-2">
                 Créer un compte
               </Link>
             </div>
