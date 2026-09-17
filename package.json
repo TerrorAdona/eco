@@ -1,15 +1,19 @@
 {
   "name": "eco",
+  "type": "module",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma skills sync || exit 0",
+    "contract:emit": "prisma contract emit"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.1",
+    "@prisma/client": "^5.21.1",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
@@ -22,6 +26,7 @@
     "daisyui": "^5.7.28",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "prisma": "^5.21.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^5"
   }

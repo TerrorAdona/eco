@@ -70,8 +70,8 @@ const Navbar = () => {
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Link href={""} className="btn btn-sm md:btn-md btn-outline btn-accent">Se connecter</Link>
-                                <Link href={""} className="btn btn-sm md:btn-md btn-accent">Créer un compte</Link>
+                                <Link href={"/sign-in"} className="btn btn-sm md:btn-md btn-outline btn-accent">Se connecter</Link>
+                                <Link href={"/sign-up"} className="btn btn-sm md:btn-md btn-accent">Créer un compte</Link>
                             </div>
                         </div>
                     ))
