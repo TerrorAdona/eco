@@ -1,9 +1,18 @@
 "use client";
+import { checkAndAddUser } from "@/app/action";
 import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useEffect } from "react";
 
 const Navbar = () => {
     const { isLoaded, isSignedIn, user } = useUser();
+
+    useEffect(() => {
+        if (user?.primaryEmailAddress?.emailAddress) {
+            checkAndAddUser(user?.primaryEmailAddress?.emailAddress)
+        }
+    }, [user])
+
     function LeafIcon() {
         return (
             <svg
@@ -39,9 +48,9 @@ const Navbar = () => {
                                 </div>
 
                                 <div className="hidden md:flex items-center gap-2">
-                                    <Link href={""} className="btn btn-ghost btn-sm">Mes budgets</Link>
-                                    <Link href={""} className="btn btn-ghost btn-sm">Mes transactions</Link>
-                                    <Link href={""} className="btn btn-ghost btn-sm">Tableau de bord</Link>
+                                    <Link href={"/budgets"} className="btn btn-ghost btn-sm">Mes budgets</Link>
+                                    <Link href={"/transactions"} className="btn btn-ghost btn-sm">Mes transactions</Link>
+                                    <Link href={"/dashboard"} className="btn btn-ghost btn-sm">Tableau de bord</Link>
                                 </div>
                                 <UserButton />
                             </div>
