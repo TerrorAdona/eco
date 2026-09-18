@@ -72,6 +72,9 @@ export async function getBudgetsByUser(email: string) {
         const budgets = await prisma.budget.findMany({
             where: {
                 userId: existingUser.id
+            },
+            include: {
+                transactions: true
             }
         })
         return budgets

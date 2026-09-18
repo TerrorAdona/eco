@@ -43,4 +43,7 @@ node_modules/
 dist/
 .env
 
+# prisma
+prisma/dev.db
+
 /src/generated/prisma

@@ -26,7 +26,7 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 setBudget(budgetData)
             }
         } catch (error) {
-
+            console.error('Erreur lors de la récupération du budget:', error)
         }
     }
 
