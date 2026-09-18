@@ -8,6 +8,9 @@ import React, { useEffect, useState } from 'react'
 import { addBudget, getBudgetsByUser } from '../action'
 import Notification from '@/components/Notification'
 import { Budget } from '@prisma/client'
+import Link from 'next/link'
+import BudgetItem from '@/components/BudgetItem'
+import { HandCoins } from 'lucide-react'
 
 const page = () => {
 
@@ -43,6 +46,8 @@ const page = () => {
                 amount,
                 selectedEmoji
             )
+
+            fetchBudgets()
 
             const modal = document.getElementById("my_modal_3") as HTMLDialogElement
             if(modal){
@@ -81,7 +86,7 @@ const page = () => {
                     <Notification message={notification} onClose={closeNotification}/>
                 )}
 
-                <button className="btn btn-outline btn-primary" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>Nouveau budget</button>
+                <button className="btn btn-outline btn-primary" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>Nouveau budget <HandCoins /></button>
                 <dialog id="my_modal_3" className="modal">
                     <div className="modal-box">
                         <form method="dialog">
@@ -115,16 +120,11 @@ const page = () => {
                     </div>
                 </dialog>
 
-                <ul className='grid md:grid-cols-3 gap-5'>
+                <ul className='grid md:grid-cols-3 gap-5 mt-5'>
                     {budgets.map((budget) => (
-                        <li key={budget.id}>
-                            <div className='card card-bordered'>
-                                <div className='card-body'>
-                                    <h3 className='card-title'>{budget.name}</h3>
-                                    <p>{budget.amount}</p>
-                                </div>
-                            </div>
-                        </li>
+                        <Link href={`/manage/${budget.id}`} key={budget.id}>
+                            <BudgetItem budget={budget} enableHover={1}/>
+                        </Link>
                     ))}
                 </ul>
 

@@ -43,7 +43,7 @@ const Navbar = () => {
                                         <LeafIcon />
                                     </span>
                                     <span className="text-xl font-bold tracking-tight text-gray-900">
-                                        eco
+                                        <Link href={"/"}>eco</Link>
                                     </span>
                                 </div>
 
