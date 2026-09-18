@@ -1,6 +1,5 @@
 "use client"
 
-
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
 import EmojiPicker from 'emoji-picker-react'
@@ -75,7 +74,6 @@ const page = () => {
                 setNotification("Erreur lors de la récupération des budgets : " + error.message)
             }
         }
-        
     }
 
     return (
@@ -111,7 +109,7 @@ const page = () => {
                             }
 
 
-                            <button 
+                            <button
                             className='btn btn-primary mt-3'
                             onClick={handleAddBudget}
                             >Créer</button>

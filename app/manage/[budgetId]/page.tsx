@@ -1,12 +1,13 @@
 "use client"
-import { addTransactionToBudget, getTransactionByBudgetId } from '@/app/action'
+import { addTransactionToBudget, deleteBudget, getTransactionByBudgetId } from '@/app/action'
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
 import { Budget } from '@/type'
 import { describe } from 'node:test'
 import { useEffect, useState } from 'react'
 import Notification from '@/components/Notification'
-import { Send } from 'lucide-react'
+import { Send, Trash } from 'lucide-react'
+import router from 'next/router'
 
 const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
 
@@ -65,6 +66,19 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         }
     }
 
+    const handleDeleteBudget = async () => {
+        try {
+            await deleteBudget(budgetId!)
+            setNotification("Budget supprimé avec succès")
+            
+        }
+        catch (error) {
+            console.error("Erreur lors de la suppression du budget : ", error)
+            setNotification("Erreur lors de la suppression du budget")
+        }
+        redirect("/budgets")
+    }
+
     // const fetchData = async () => {
     //     const data = await params
     //     setBudgetId(data.budgetId)
@@ -93,7 +107,10 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                     enableHover={0}
                                 />
 
-                                <button className="btn mt-4 w-full">
+                                <button 
+                                className="btn mt-4 w-full"
+                                onClick={() => handleDeleteBudget()}
+                                >
                                     Supprimer le budget
                                 </button>
 
@@ -195,7 +212,7 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                                 {transaction.description}
                                                             </span>
 
-                                                            <span className="text-xs text-base-content/50">
+                                                            <span className="badge badge-outline">
                                                                 {new Date(
                                                                     transaction.createdAt
                                                                 ).toLocaleString("fr-FR", {
@@ -229,6 +246,10 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                     >
                                                         -{transaction.amount.toLocaleString("fr-FR")} Ar
                                                     </div>
+                                                    {/* Bouton supprimer (sans action) */}
+                                                    <button className="btn btn-ghost btn-sm" aria-label="Supprimer la transaction">
+                                                        <Trash className="h-4 w-4" />
+                                                    </button>
 
                                                 </li>
 
