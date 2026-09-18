@@ -1,5 +1,5 @@
 "use client"
-import { addTransactionToBudget, deleteBudget, getTransactionByBudgetId } from '@/app/action'
+import { addTransactionToBudget, deleteBudget, deleteTransaction, getTransactionByBudgetId } from '@/app/action'
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
 import { Budget } from '@/type'
@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import Notification from '@/components/Notification'
 import { Send, Trash } from 'lucide-react'
 import router from 'next/router'
+import { redirect } from 'next/navigation'
 
 const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
 
@@ -67,16 +68,41 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     }
 
     const handleDeleteBudget = async () => {
-        try {
-            await deleteBudget(budgetId!)
-            setNotification("Budget supprimé avec succès")
-            
+        const confirmed = window.confirm(
+            "Voulez vous réellement supprimer ce budget et toutes les transactions associées ?"
+        )
+
+        if (confirmed) {
+            try {
+                await deleteBudget(budgetId!)
+                setNotification("Budget supprimé avec succès")
+
+            }
+            catch (error) {
+                console.error("Erreur lors de la suppression du budget : ", error)
+                setNotification("Erreur lors de la suppression du budget")
+            }
+            redirect("/budgets")
         }
-        catch (error) {
-            console.error("Erreur lors de la suppression du budget : ", error)
-            setNotification("Erreur lors de la suppression du budget")
+    }
+
+    const handleDeleteTransaction = async (transactionId: string) => {
+        const confirmed = window.confirm(
+            "Voulez vous réellement supprimer cette transaction ?"
+        )
+
+        if (confirmed) {
+            try {
+                await deleteTransaction(transactionId)
+                setNotification("Transaction supprimée avec succès")
+                fetchBudgetData(budgetId!)
+
+            }
+            catch (error) {
+                console.error("Erreur lors de la suppression de la transaction : ", error)
+                setNotification("Erreur lors de la suppression de la transaction")
+            }
         }
-        redirect("/budgets")
     }
 
     // const fetchData = async () => {
@@ -107,9 +133,9 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                     enableHover={0}
                                 />
 
-                                <button 
-                                className="btn mt-4 w-full"
-                                onClick={() => handleDeleteBudget()}
+                                <button
+                                    className="btn mt-4 w-full"
+                                    onClick={() => handleDeleteBudget()}
                                 >
                                     Supprimer le budget
                                 </button>
@@ -191,21 +217,6 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                     {/* Informations */}
                                                     <div className="flex items-center gap-3 min-w-0">
 
-                                                        {/* <div
-                                                            className="
-                                        flex items-center justify-center
-                                        w-10 h-10
-                                        rounded-xl
-                                        bg-primary/10
-                                        text-xl
-                                        shrink-0
-                                        transition-transform duration-300
-                                        group-hover:scale-110
-                                    "
-                                                        >
-                                                            {transaction.emoji}
-                                                        </div> */}
-
                                                         <div className="flex flex-col min-w-0">
 
                                                             <span className="font-medium truncate">
@@ -247,7 +258,11 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                         -{transaction.amount.toLocaleString("fr-FR")} Ar
                                                     </div>
                                                     {/* Bouton supprimer (sans action) */}
-                                                    <button className="btn btn-ghost btn-sm" aria-label="Supprimer la transaction">
+                                                    <button
+                                                        className="btn btn-ghost btn-sm"
+                                                        aria-label="Supprimer la transaction"
+                                                        onClick={() => handleDeleteTransaction(transaction.id)}
+                                                    >
                                                         <Trash className="h-4 w-4" />
                                                     </button>
 
