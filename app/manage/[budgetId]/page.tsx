@@ -198,10 +198,12 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                             <span className="text-xs text-base-content/50">
                                                                 {new Date(
                                                                     transaction.createdAt
-                                                                ).toLocaleDateString("fr-FR", {
+                                                                ).toLocaleString("fr-FR", {
                                                                     day: "2-digit",
                                                                     month: "short",
                                                                     year: "numeric",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
                                                                 })}
                                                             </span>
 
