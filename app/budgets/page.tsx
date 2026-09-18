@@ -6,6 +6,7 @@ import { useUser } from '@clerk/nextjs'
 import EmojiPicker from 'emoji-picker-react'
 import React, { useEffect, useState } from 'react'
 import { addBudget } from '../action'
+import Notification from '@/components/Notification'
 
 const page = () => {
 
@@ -14,6 +15,11 @@ const page = () => {
     const [budgetAmount, setBudgetAmount] = useState<string>("")
     const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false)
     const [selectedEmoji, setSelectedEmoji] = useState<string>("")
+
+    const [notification, setNotification] = useState<string>("")
+    const closeNotification = () => {
+        setNotification("")
+    }
 
     const handleEmojiSelect = (emojiObject : {emoji:string}) => {
         setSelectedEmoji(emojiObject.emoji)
@@ -43,14 +49,20 @@ const page = () => {
             setBudgetName("")
             setBudgetAmount("")
             setSelectedEmoji("")
-        } catch (error) {
-            
+            setNotification("Budget ajouté avec succès")
+        } catch (error : any) {
+            setNotification("Erreur lors de l'ajout du budget : " + error.message)
         }
     }
 
     return (
         <div>
             <Wrapper>
+
+                {notification && (
+                    <Notification message={notification} onClose={closeNotification}/>
+                )}
+
                 <button className="btn btn-outline btn-primary" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>Nouveau budget</button>
                 <dialog id="my_modal_3" className="modal">
                     <div className="modal-box">
