@@ -5,8 +5,9 @@ import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
 import EmojiPicker from 'emoji-picker-react'
 import React, { useEffect, useState } from 'react'
-import { addBudget } from '../action'
+import { addBudget, getBudgetsByUser } from '../action'
 import Notification from '@/components/Notification'
+import { Budget } from '@prisma/client'
 
 const page = () => {
 
@@ -15,6 +16,7 @@ const page = () => {
     const [budgetAmount, setBudgetAmount] = useState<string>("")
     const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false)
     const [selectedEmoji, setSelectedEmoji] = useState<string>("")
+    const [budgets, setBudgets] = useState<Budget[]>([])
 
     const [notification, setNotification] = useState<string>("")
     const closeNotification = () => {
@@ -36,7 +38,7 @@ const page = () => {
                 throw new Error("Utilisateur non trouvé")
             }
             await addBudget (
-                user.primaryEmailAddress?.emailAddress as String,
+                user?.primaryEmailAddress?.emailAddress as String,
                 budgetName,
                 amount,
                 selectedEmoji
@@ -53,6 +55,22 @@ const page = () => {
         } catch (error : any) {
             setNotification("Erreur lors de l'ajout du budget : " + error.message)
         }
+    }
+
+    useEffect(() => {
+        fetchBudgets()
+    }, [user])
+
+    const fetchBudgets = async () => {
+        if(user?.primaryEmailAddress?.emailAddress){
+            try {
+                const budgets = await getBudgetsByUser(user.primaryEmailAddress.emailAddress)
+                setBudgets(budgets)
+            } catch (error : any) {
+                setNotification("Erreur lors de la récupération des budgets : " + error.message)
+            }
+        }
+        
     }
 
     return (
@@ -96,6 +114,20 @@ const page = () => {
                         </div>
                     </div>
                 </dialog>
+
+                <ul className='grid md:grid-cols-3 gap-5'>
+                    {budgets.map((budget) => (
+                        <li key={budget.id}>
+                            <div className='card card-bordered'>
+                                <div className='card-body'>
+                                    <h3 className='card-title'>{budget.name}</h3>
+                                    <p>{budget.amount}</p>
+                                </div>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+
             </Wrapper>
         </div>
     )
