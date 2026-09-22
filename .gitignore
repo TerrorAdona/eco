@@ -47,3 +47,4 @@ dist/
 prisma/dev.db
 
 /src/generated/prisma
+prisma/dev.db
