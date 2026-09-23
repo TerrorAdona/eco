@@ -1,6 +1,4 @@
-import type { Appearance } from "@clerk/nextjs";
-
-export const clerkAppearance: Appearance = {
+export const clerkAppearance = {
   variables: {
     colorPrimary: "#5e81ac",
     colorBackground: "#ffffff",

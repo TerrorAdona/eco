@@ -3,15 +3,15 @@
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
 import EmojiPicker from 'emoji-picker-react'
-import React, { useEffect, useState } from 'react'
-import { addBudget, getBudgetsByUser } from '../action'
+import React, { useCallback, useEffect, useState } from 'react'
+import { addBudget, deleteBudget, getBudgetsByUser, updateBudget } from '../action'
 import Notification from '@/components/Notification'
-import { Budget } from '@prisma/client'
+import { Budget } from '@/type'
 import Link from 'next/link'
 import BudgetItem from '@/components/BudgetItem'
 import { HandCoins } from 'lucide-react'
 
-const page = () => {
+const Page = () => {
 
     const { user } = useUser()
     const [budgetName, setBudgetName] = useState<string>("")
@@ -19,60 +19,104 @@ const page = () => {
     const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false)
     const [selectedEmoji, setSelectedEmoji] = useState<string>("")
     const [budgets, setBudgets] = useState<Budget[]>([])
+    const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
 
     const [notification, setNotification] = useState<string>("")
     const closeNotification = () => {
         setNotification("")
     }
 
-    const handleEmojiSelect = (emojiObject : {emoji:string}) => {
+    const getUserEmail = () => user?.primaryEmailAddress?.emailAddress ?? ""
+
+    const handleEmojiSelect = (emojiObject: { emoji: string }) => {
         setSelectedEmoji(emojiObject.emoji)
         setShowEmojiPicker(false)
     }
 
-    const handleAddBudget = async () => {
-        try {
-            const amount = parseFloat(budgetAmount)
-            if(isNaN(amount) || amount <= 0) {
-                throw new Error("Montant invalide")
-            }
-            if(!user){
-                throw new Error("Utilisateur non trouvé")
-            }
-            await addBudget (
-                user?.primaryEmailAddress?.emailAddress as String,
-                budgetName,
-                amount,
-                selectedEmoji
-            )
-
-            fetchBudgets()
-
-            const modal = document.getElementById("my_modal_3") as HTMLDialogElement
-            if(modal){
-                modal.close()
-            }
-            setBudgetName("")
-            setBudgetAmount("")
-            setSelectedEmoji("")
-            setNotification("Budget ajouté avec succès")
-        } catch (error : any) {
-            setNotification("Erreur lors de l'ajout du budget : " + error.message)
-        }
+    const resetForm = () => {
+        setBudgetName("")
+        setBudgetAmount("")
+        setSelectedEmoji("")
+        setShowEmojiPicker(false)
+        setEditingBudgetId(null)
     }
+
+    const closeModal = () => {
+        const modal = document.getElementById("my_modal_3") as HTMLDialogElement | null
+        modal?.close()
+    }
+
+    const openCreateModal = () => {
+        resetForm()
+        const modal = document.getElementById("my_modal_3") as HTMLDialogElement | null
+        modal?.showModal()
+    }
+
+    const openEditModal = (budget: Budget) => {
+        setBudgetName(budget.name)
+        setBudgetAmount(String(budget.amount))
+        setSelectedEmoji(budget.emoji ?? "")
+        setShowEmojiPicker(false)
+        setEditingBudgetId(budget.id)
+        const modal = document.getElementById("my_modal_3") as HTMLDialogElement | null
+        modal?.showModal()
+    }
+
+    const getErrorMessage = (error: unknown, fallback: string) => {
+        return error instanceof Error ? `${fallback} : ${error.message}` : fallback
+    }
+
+    const fetchBudgets = useCallback(async () => {
+        const email = user?.primaryEmailAddress?.emailAddress ?? ""
+        if (email) {
+            try {
+                const data = await getBudgetsByUser(email)
+                setBudgets(data)
+            } catch (error: unknown) {
+                setNotification(getErrorMessage(error, "Erreur lors de la récupération des budgets"))
+            }
+        }
+    }, [user?.primaryEmailAddress?.emailAddress])
 
     useEffect(() => {
         fetchBudgets()
-    }, [user])
+    }, [fetchBudgets])
 
-    const fetchBudgets = async () => {
-        if(user?.primaryEmailAddress?.emailAddress){
-            try {
-                const budgets = await getBudgetsByUser(user.primaryEmailAddress.emailAddress)
-                setBudgets(budgets)
-            } catch (error : any) {
-                setNotification("Erreur lors de la récupération des budgets : " + error.message)
+    const handleSubmitBudget = async () => {
+        try {
+            const email = getUserEmail()
+            if (!email) throw new Error("Utilisateur non trouvé")
+            const amount = parseFloat(budgetAmount)
+            if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+            if (!budgetName.trim()) throw new Error("Nom du budget requis")
+
+            if (editingBudgetId) {
+                await updateBudget(email, editingBudgetId, budgetName, amount, selectedEmoji)
+                setNotification("Budget modifié avec succès")
+            } else {
+                await addBudget(email, budgetName, amount, selectedEmoji)
+                setNotification("Budget ajouté avec succès")
             }
+
+            await fetchBudgets()
+            closeModal()
+            resetForm()
+        } catch (error: unknown) {
+            setNotification(getErrorMessage(error, "Erreur lors de l'enregistrement du budget"))
+        }
+    }
+
+    const handleDeleteBudget = async (budgetId: string) => {
+        const confirmed = window.confirm("Voulez vous réellement supprimer ce budget et toutes les transactions associées ?")
+        if (!confirmed) return
+        try {
+            const email = getUserEmail()
+            if (!email) throw new Error("Utilisateur non trouvé")
+            await deleteBudget(budgetId, email)
+            setNotification("Budget supprimé avec succès")
+            await fetchBudgets()
+        } catch (error: unknown) {
+            setNotification(getErrorMessage(error, "Erreur lors de la suppression du budget"))
         }
     }
 
@@ -84,13 +128,13 @@ const page = () => {
                     <Notification message={notification} onClose={closeNotification}/>
                 )}
 
-                <button className="btn btn-outline btn-primary" onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}>Nouveau budget <HandCoins /></button>
+                <button className="btn btn-outline btn-primary" onClick={openCreateModal}>Nouveau budget <HandCoins /></button>
                 <dialog id="my_modal_3" className="modal">
                     <div className="modal-box">
                         <form method="dialog">
-                            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onClick={resetForm}>✕</button>
                         </form>
-                        <h3 className="font-bold text-lg">Création d'un budget</h3>
+                        <h3 className="font-bold text-lg">{editingBudgetId ? "Modification du budget" : "Création d'un budget"}</h3>
                         <p className="py-4">Permet de controler ces dépenses</p>
                         <div className='w-full flex flex-col'>
 
@@ -111,8 +155,8 @@ const page = () => {
 
                             <button
                             className='btn btn-primary mt-3'
-                            onClick={handleAddBudget}
-                            >Créer</button>
+                            onClick={handleSubmitBudget}
+                            >{editingBudgetId ? "Mettre à jour" : "Créer"}</button>
 
                         </div>
                     </div>
@@ -120,9 +164,15 @@ const page = () => {
 
                 <ul className='grid md:grid-cols-3 gap-5 mt-5'>
                     {budgets.map((budget) => (
-                        <Link href={`/manage/${budget.id}`} key={budget.id}>
-                            <BudgetItem budget={budget} enableHover={1}/>
-                        </Link>
+                        <li key={budget.id} className="flex flex-col gap-2">
+                            <Link href={`/manage/${budget.id}`}>
+                                <BudgetItem budget={budget} enableHover={1} />
+                            </Link>
+                            <div className="flex gap-2">
+                                <button className="btn btn-sm btn-outline flex-1" onClick={() => openEditModal(budget)}>Modifier</button>
+                                <button className="btn btn-sm btn-ghost flex-1" onClick={() => handleDeleteBudget(budget.id)}>Supprimer</button>
+                            </div>
+                        </li>
                     ))}
                 </ul>
 
@@ -132,4 +182,4 @@ const page = () => {
 
 }
 
-export default page
+export default Page

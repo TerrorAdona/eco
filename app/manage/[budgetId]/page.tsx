@@ -1,30 +1,36 @@
 "use client"
-import { addTransactionToBudget, deleteBudget, deleteTransaction, getTransactionByBudgetId } from '@/app/action'
+import { addTransactionToBudget, deleteBudget, deleteTransaction, getTransactionByBudgetId, updateBudget } from '@/app/action'
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
 import { Budget } from '@/type'
-import { describe } from 'node:test'
+import { useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
 import Notification from '@/components/Notification'
 import { Send, Trash } from 'lucide-react'
-import router from 'next/router'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
-const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
-
+const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
+    const { user } = useUser()
+    const router = useRouter()
     const [budgetId, setBudgetId] = useState<string>()
     const [budget, setBudget] = useState<Budget>()
     const [description, setDescription] = useState<string>('')
     const [amount, setAmount] = useState<string>('')
     const [notification, setNotification] = useState<string>("")
+    const [showEditBudget, setShowEditBudget] = useState<boolean>(false)
+    const [editName, setEditName] = useState<string>('')
+    const [editAmount, setEditAmount] = useState<string>('')
+    const [editEmoji, setEditEmoji] = useState<string>('')
     const closeNotification = () => {
         setNotification("")
     }
 
-    async function fetchBudgetData(budgetId: string) {
+    const getUserEmail = () => user?.primaryEmailAddress?.emailAddress ?? ""
+
+    async function fetchBudgetData(id: string, email: string) {
         try {
-            if (budgetId) {
-                const budgetData = await getTransactionByBudgetId(budgetId)
+            if (id && email) {
+                const budgetData = await getTransactionByBudgetId(id, email)
                 setBudget(budgetData)
             }
         } catch (error) {
@@ -32,15 +38,17 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         }
     }
 
+    const userEmail = user?.primaryEmailAddress?.emailAddress ?? ""
+
     useEffect(() => {
         const getId = async () => {
             const data = await params
             setBudgetId(data.budgetId)
-            fetchBudgetData(data.budgetId)
+            if (userEmail) fetchBudgetData(data.budgetId, userEmail)
         }
 
         getId()
-    }, [])
+    }, [userEmail, params])
 
     const handleAddTransaction = async () => {
         if (!amount || !description) {
@@ -49,21 +57,26 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         }
 
         try {
+            const email = getUserEmail()
+            if (!email) {
+                setNotification("Utilisateur non trouvé")
+                return
+            }
             const amountNumber = parseFloat(amount)
             if (isNaN(amountNumber) || amountNumber <= 0) {
                 setNotification("Veuillez entrer un montant valide")
                 return
             }
-            const newTransaction = await addTransactionToBudget(budgetId!, amountNumber, description)
+            await addTransactionToBudget(budgetId!, amountNumber, description, email)
             setNotification("Transaction ajoutée avec succès")
-            fetchBudgetData(budgetId!)
+            fetchBudgetData(budgetId!, email)
 
             setAmount("")
             setDescription("")
         }
         catch (error) {
             console.error("Erreur lors de l'ajout de la transaction : ", error)
-            setNotification("Budget dépassé")
+            setNotification(error instanceof Error ? error.message : "Budget dépassé")
         }
     }
 
@@ -74,15 +87,19 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
 
         if (confirmed) {
             try {
-                await deleteBudget(budgetId!)
+                const email = getUserEmail()
+                if (!email) {
+                    setNotification("Utilisateur non trouvé")
+                    return
+                }
+                await deleteBudget(budgetId!, email)
                 setNotification("Budget supprimé avec succès")
-
+                router.push("/budgets")
             }
             catch (error) {
                 console.error("Erreur lors de la suppression du budget : ", error)
                 setNotification("Erreur lors de la suppression du budget")
             }
-            redirect("/budgets")
         }
     }
 
@@ -93,9 +110,14 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
 
         if (confirmed) {
             try {
-                await deleteTransaction(transactionId)
+                const email = getUserEmail()
+                if (!email) {
+                    setNotification("Utilisateur non trouvé")
+                    return
+                }
+                await deleteTransaction(transactionId, email)
                 setNotification("Transaction supprimée avec succès")
-                fetchBudgetData(budgetId!)
+                fetchBudgetData(budgetId!, email)
 
             }
             catch (error) {
@@ -105,12 +127,39 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         }
     }
 
-    // const fetchData = async () => {
-    //     const data = await params
-    //     setBudgetId(data.budgetId)
-    // }
+    const openEditBudget = () => {
+        if (!budget) return
+        setEditName(budget.name)
+        setEditAmount(String(budget.amount))
+        setEditEmoji(budget.emoji ?? "")
+        setShowEditBudget(true)
+    }
 
-    // fetchData()
+    const handleUpdateBudget = async () => {
+        try {
+            const email = getUserEmail()
+            if (!email || !budgetId) {
+                setNotification("Utilisateur non trouvé")
+                return
+            }
+            const amountNumber = parseFloat(editAmount)
+            if (!editName.trim()) {
+                setNotification("Nom du budget requis")
+                return
+            }
+            if (isNaN(amountNumber) || amountNumber <= 0) {
+                setNotification("Veuillez entrer un montant valide")
+                return
+            }
+            await updateBudget(email, budgetId, editName, amountNumber, editEmoji)
+            setNotification("Budget modifié avec succès")
+            setShowEditBudget(false)
+            fetchBudgetData(budgetId, email)
+        } catch (error) {
+            console.error("Erreur lors de la modification du budget : ", error)
+            setNotification(error instanceof Error ? error.message : "Erreur lors de la modification du budget")
+        }
+    }
 
     return (
         <Wrapper>
@@ -133,12 +182,55 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                     enableHover={0}
                                 />
 
-                                <button
-                                    className="btn mt-4 w-full"
-                                    onClick={() => handleDeleteBudget()}
-                                >
-                                    Supprimer le budget
-                                </button>
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        className="btn btn-outline flex-1"
+                                        onClick={openEditBudget}
+                                    >
+                                        Modifier
+                                    </button>
+                                    <button
+                                        className="btn flex-1"
+                                        onClick={() => handleDeleteBudget()}
+                                    >
+                                        Supprimer
+                                    </button>
+                                </div>
+
+                                {showEditBudget && (
+                                    <div className="space-y-3 flex flex-col mt-4 p-4 border border-base-300 rounded-xl bg-base-100">
+                                        <h3 className="font-bold">Modifier le budget</h3>
+                                        <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            placeholder="Nom du budget"
+                                            className="input input-bordered w-full"
+                                        />
+                                        <input
+                                            type="number"
+                                            value={editAmount}
+                                            onChange={(e) => setEditAmount(e.target.value)}
+                                            placeholder="Montant du budget"
+                                            className="input input-bordered w-full"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={editEmoji}
+                                            onChange={(e) => setEditEmoji(e.target.value)}
+                                            placeholder="Emoji (optionnel)"
+                                            className="input input-bordered w-full"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button onClick={handleUpdateBudget} className="btn btn-primary flex-1">
+                                                Enregistrer
+                                            </button>
+                                            <button onClick={() => setShowEditBudget(false)} className="btn btn-ghost flex-1">
+                                                Annuler
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Formulaire */}
                                 <div className="space-y-4 flex flex-col mt-4">
@@ -316,7 +408,7 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                         </h2>
 
                                         <p className="text-sm text-base-content/50 mt-1 max-w-xs">
-                                            Aucune dépense n'a encore été enregistrée dans ce budget.
+                                            Aucune dépense n&apos;a encore été enregistrée dans ce budget.
                                         </p>
 
                                     </div>
@@ -334,4 +426,4 @@ const page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     )
 }
 
-export default page
+export default Page

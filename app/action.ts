@@ -1,7 +1,26 @@
 'use server'
 
 import prisma from "@/lib/prisma"
-import { Budget, Transaction } from "@/type"
+
+async function getUserOrThrow(email: string) {
+    if (!email) throw new Error("Utilisateur non trouvé")
+    const user = await prisma.user.findUnique({
+        where: { email }
+    })
+    if (!user) throw new Error("Utilisateur non trouvé")
+    return user
+}
+
+async function assertBudgetOwner(budgetId: string, email: string) {
+    const user = await getUserOrThrow(email)
+    const budget = await prisma.budget.findUnique({
+        where: { id: budgetId },
+        include: { transactions: true }
+    })
+    if (!budget) throw new Error("Budget non trouvé")
+    if (budget.userId !== user.id) throw new Error("Accès non autorisé")
+    return { user, budget }
+}
 
 export async function checkAndAddUser(email: string | undefined) {
     if (!email) return
@@ -30,46 +49,49 @@ export async function checkAndAddUser(email: string | undefined) {
 
 export async function addBudget(email: string, name: string, amount: number, selectedEmoji: string) {
     try {
-        const existingUser = await prisma.user.findUnique({
-            where: {
-                email: email
-            }
-        })
-        if (!existingUser) {
-            throw new Error("Utilisateur non trouvé")
-        }
+        const existingUser = await getUserOrThrow(email)
+        const trimmedName = name.trim()
+        if (!trimmedName) throw new Error("Nom du budget requis")
+        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
         await prisma.budget.create({
             data: {
-                name: name,
+                name: trimmedName,
                 amount: amount,
                 emoji: selectedEmoji,
                 userId: existingUser.id
             }
         })
-        console.log("Nouveau budget ajouté dans la base de données")
     } catch (error) {
         console.error("Erreur lors de l'ajout du budget : ", error)
         throw error
     }
 }
 
-export async function getBudgetsByUser(email: string) {
+export async function updateBudget(email: string, budgetId: string, name: string, amount: number, selectedEmoji: string) {
     try {
-        const existingUser = await prisma.user.findUnique({
-            where: {
-                email: email
-            },
-            include: {
-                budgets: {
-                    include: {
-                        transactions: true
-                    }
-                }
+        const { budget } = await assertBudgetOwner(budgetId, email)
+        const trimmedName = name.trim()
+        if (!trimmedName) throw new Error("Nom du budget requis")
+        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+        const totalSpent = budget.transactions.reduce((acc, t) => acc + t.amount, 0)
+        if (amount < totalSpent) throw new Error("Le nouveau montant est inférieur aux dépenses déjà enregistrées")
+        await prisma.budget.update({
+            where: { id: budgetId },
+            data: {
+                name: trimmedName,
+                amount: amount,
+                emoji: selectedEmoji
             }
         })
-        if (!existingUser) {
-            throw new Error("Utilisateur non trouvé")
-        }
+    } catch (error) {
+        console.error("Erreur lors de la modification du budget : ", error)
+        throw error
+    }
+}
+
+export async function getBudgetsByUser(email: string) {
+    try {
+        const existingUser = await getUserOrThrow(email)
         const budgets = await prisma.budget.findMany({
             where: {
                 userId: existingUser.id
@@ -85,34 +107,9 @@ export async function getBudgetsByUser(email: string) {
     }
 }
 
-// export async function getTransactionByBudgetId(budgetId: string) {
-//     try {
-//         const transactions = await prisma.transaction.findMany({
-//             where: {
-//                 budgetId: budgetId
-//             }
-//         })
-//         return transactions
-//     } catch (error) {
-//         console.error("Erreur lors de la récupération des transactions : ", error)
-//         throw error
-//     }
-// }
-
-export async function getTransactionByBudgetId(budgetId: string) {
+export async function getTransactionByBudgetId(budgetId: string, email: string) {
     try {
-        const budget = await prisma.budget.findUnique({
-            where: {
-                id: budgetId
-            },
-            include: {
-                transactions: true
-            }
-        })
-        if (!budget) {
-            throw new Error('Budget non trouvé.');
-        }
-
+        const { budget } = await assertBudgetOwner(budgetId, email)
         return budget;
     } catch (error) {
         console.error('Erreur lors de la récupération des transactions:', error);
@@ -123,20 +120,11 @@ export async function getTransactionByBudgetId(budgetId: string) {
 export async function addTransactionToBudget(
     budgetId: string,
     amount: number,
-    description: string
+    description: string,
+    email: string
 ) {
     try {
-        const budget = await prisma.budget.findUnique({
-            where: {
-                id: budgetId
-            },
-            include: {
-                transactions: true
-            }
-        })
-        if (!budget) {
-            throw new Error("Budget non trouvé")
-        }
+        const { budget } = await assertBudgetOwner(budgetId, email)
 
         const totalTransactions = budget.transactions.reduce((acc, t) => {
             return acc + t.amount
@@ -148,7 +136,7 @@ export async function addTransactionToBudget(
         }
 
 
-        const newTransaction = await prisma.transaction.create({
+        await prisma.transaction.create({
             data: {
                 amount: amount,
                 description: description,
@@ -160,15 +148,15 @@ export async function addTransactionToBudget(
                 }
             }
         })
-        console.log("Nouvelle transaction ajoutée dans la base de données")
     } catch (error) {
         console.error("Erreur lors de l'ajout de la transaction : ", error)
         throw error
     }
 }
 
-export const deleteBudget = async (budgetId: string) => {
+export const deleteBudget = async (budgetId: string, email: string) => {
     try {
+        await assertBudgetOwner(budgetId, email)
         await prisma.transaction.deleteMany({
             where: {
                 budgetId: budgetId
@@ -179,29 +167,34 @@ export const deleteBudget = async (budgetId: string) => {
                 id: budgetId
             }
         })
-        console.log("Budget supprimé avec succès")
     } catch (error) {
         console.error('Erreur lors de la suppression du budget : ', error)
         throw error
     }
 }
 
-export async function deleteTransaction(transactionId: string) {
+export async function deleteTransaction(transactionId: string, email: string) {
     try {
+        const user = await getUserOrThrow(email)
         const transaction = await prisma.transaction.findUnique({
             where: {
                 id: transactionId
+            },
+            include: {
+                budget: true
             }
         })
         if (!transaction) {
             throw new Error("Transaction non trouvée")
+        }
+        if (!transaction.budget || transaction.budget.userId !== user.id) {
+            throw new Error("Accès non autorisé")
         }
         await prisma.transaction.delete({
             where: {
                 id: transactionId
             }
         })
-        console.log("Transaction supprimée avec succès")
     } catch (error) {
         console.error('Erreur lors de la suppression de la transaction : ', error)
         throw error
@@ -257,13 +250,6 @@ export async function getTransactionsByEmailAndPeriod(email: string, period: str
         if (!user) {
             throw new Error("Utilisateur non trouvé")
         }
-
-        // const transactions = user.budgets.flatMap((budget: Budget) =>
-        //     Budget.transactions.map((transaction: Transaction) => ({
-        //         ...transaction,
-        //         budgetName: budget.name
-        //     }))
-        // );
 
         const transactions = user.budgets.flatMap(budget =>
             budget.transactions.map(transaction => ({
