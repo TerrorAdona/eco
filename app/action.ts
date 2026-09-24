@@ -262,7 +262,29 @@ export async function getDashboardData(email: string) {
     }
 }
 
-export async function getTransactionsByEmailAndPeriod(email: string, period: string) {
+export interface TransactionFilters {
+    search?: string;
+    category?: string;
+    budgetId?: string;
+    minAmount?: number;
+    maxAmount?: number;
+}
+
+export async function getBudgetOptions(email: string) {
+    try {
+        const user = await getUserOrThrow(email)
+        return await prisma.budget.findMany({
+            where: { userId: user.id },
+            select: { id: true, name: true },
+            orderBy: { name: "asc" }
+        })
+    } catch (error) {
+        console.error("Erreur lors de la récupération des budgets : ", error)
+        throw error
+    }
+}
+
+export async function getTransactionsByEmailAndPeriod(email: string, period: string, filters?: TransactionFilters) {
     try {
         const now = new Date();
         let dateLimit
@@ -287,40 +309,35 @@ export async function getTransactionsByEmailAndPeriod(email: string, period: str
                 throw new Error("Période invalide")
         }
 
-        const user = await prisma.user.findUnique({
+        await getUserOrThrow(email)
+        const search = filters?.search?.trim()
+        const rawCategory = filters?.category && filters.category !== "all" ? filters.category : undefined
+        const category = rawCategory ? normalizeTransactionCategory(rawCategory) : undefined
+        const applyCategory = rawCategory !== undefined && category === rawCategory
+        const budgetId = filters?.budgetId && filters.budgetId !== "all" ? filters.budgetId : undefined
+        const minAmount = filters?.minAmount !== undefined && !isNaN(filters.minAmount) ? filters.minAmount : undefined
+        const maxAmount = filters?.maxAmount !== undefined && !isNaN(filters.maxAmount) ? filters.maxAmount : undefined
+
+        const transactions = await prisma.transaction.findMany({
             where: {
-                email: email
+                createdAt: { gte: dateLimit },
+                budget: { user: { email: email } },
+                ...(search ? { description: { contains: search } } : {}),
+                ...(applyCategory ? { category: category } : {}),
+                ...(budgetId ? { budgetId: budgetId } : {}),
+                ...((minAmount !== undefined || maxAmount !== undefined) ? { amount: { ...(minAmount !== undefined ? { gte: minAmount } : {}), ...(maxAmount !== undefined ? { lte: maxAmount } : {}) } } : {}),
             },
             include: {
-                budgets: {
-                    include: {
-                        transactions: {
-                            where: {
-                                createdAt: {
-                                    gte: dateLimit
-                                }
-                            },
-                            orderBy: {
-                                createdAt: "desc"
-                            }
-                        }
-                    }
-                }
-            }
+                budget: { select: { id: true, name: true } }
+            },
+            orderBy: { createdAt: "desc" }
         })
-        if (!user) {
-            throw new Error("Utilisateur non trouvé")
-        }
 
-        const transactions = user.budgets.flatMap(budget =>
-            budget.transactions.map(transaction => ({
-                ...transaction,
-                budgetName: budget.name,
-                budgetId: budget.id
-            }))
-        )
-
-        return transactions;
+        return transactions.map(transaction => ({
+            ...transaction,
+            budgetName: transaction.budget?.name ?? "",
+            budgetId: transaction.budget?.id ?? transaction.budgetId
+        }));
     } catch (error) {
         console.error("Erreur lors de la récupération des transactions : ", error)
         throw error
