@@ -1,4 +1,4 @@
-import { Budget } from "@/type"
+import { Budget, normalizeTransactionCategory } from "@/type"
 import React from "react"
 
 interface BudgetItemProps {
@@ -33,8 +33,11 @@ const BudgetItem: React.FC<BudgetItemProps> = ({ budget, enableHover }) => {
                     </div>
                     <div className="flex flex-col ml-3">
                         <h2 className="font-bold text-xl">{budget.name}</h2>
-                        <span className="text-sm text-gray-500 text-sm">
-                            {transactionCount} transaction(s)
+                        <span className="flex items-center gap-2">
+                            <span className="badge badge-secondary badge-sm">{normalizeTransactionCategory(budget.category)}</span>
+                            <span className="text-sm text-gray-500 text-sm">
+                                {transactionCount} transaction(s)
+                            </span>
                         </span>
                     </div>
                 </div>

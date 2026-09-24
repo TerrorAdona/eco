@@ -59,7 +59,7 @@ export async function checkAndAddUser(email: string | undefined) {
     }
 }
 
-export async function addBudget(email: string, name: string, amount: number, selectedEmoji: string) {
+export async function addBudget(email: string, name: string, amount: number, selectedEmoji: string, category?: string) {
     try {
         const existingUser = await getUserOrThrow(email)
         const trimmedName = name.trim()
@@ -69,6 +69,7 @@ export async function addBudget(email: string, name: string, amount: number, sel
             data: {
                 name: trimmedName,
                 amount: amount,
+                category: normalizeTransactionCategory(category),
                 emoji: selectedEmoji,
                 userId: existingUser.id
             }
@@ -79,7 +80,7 @@ export async function addBudget(email: string, name: string, amount: number, sel
     }
 }
 
-export async function updateBudget(email: string, budgetId: string, name: string, amount: number, selectedEmoji: string) {
+export async function updateBudget(email: string, budgetId: string, name: string, amount: number, selectedEmoji: string, category?: string) {
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
         const trimmedName = name.trim()
@@ -92,6 +93,7 @@ export async function updateBudget(email: string, budgetId: string, name: string
             data: {
                 name: trimmedName,
                 amount: amount,
+                category: normalizeTransactionCategory(category ?? budget.category),
                 emoji: selectedEmoji
             }
         })

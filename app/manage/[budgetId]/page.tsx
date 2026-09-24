@@ -3,11 +3,11 @@ import { addTransactionToBudget, deleteBudget, deleteTransaction, getTransaction
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
 import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeTransactionCategory, TRANSACTION_CATEGORIES, Transaction } from '@/type'
+import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
 import Notification from '@/components/Notification'
 import { Pencil, Send, Trash } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const { user } = useUser()
@@ -22,6 +22,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [editName, setEditName] = useState<string>('')
     const [editAmount, setEditAmount] = useState<string>('')
     const [editEmoji, setEditEmoji] = useState<string>('')
+    const [editCategory, setEditCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
     const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
     const closeNotification = () => {
         setNotification("")
@@ -151,6 +152,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         setEditName(budget.name)
         setEditAmount(String(budget.amount))
         setEditEmoji(budget.emoji ?? "")
+        setEditCategory(normalizeTransactionCategory(budget.category))
         setShowEditBudget(true)
     }
 
@@ -170,7 +172,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 setNotification("Veuillez entrer un montant valide")
                 return
             }
-            await updateBudget(email, budgetId, editName, amountNumber, editEmoji)
+            await updateBudget(email, budgetId, editName, amountNumber, editEmoji, editCategory)
             setNotification("Budget modifié avec succès")
             setShowEditBudget(false)
             fetchBudgetData(budgetId, email)
@@ -240,6 +242,16 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                             placeholder="Emoji (optionnel)"
                                             className="input input-bordered w-full"
                                         />
+                                        <select
+                                            value={editCategory}
+                                            onChange={(e) => setEditCategory(e.target.value)}
+                                            className="select select-bordered w-full"
+                                            aria-label="Catégorie du budget"
+                                        >
+                                            {TRANSACTION_CATEGORIES.map((c) => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
                                         <div className="flex gap-2">
                                             <button onClick={handleUpdateBudget} className="btn btn-primary flex-1">
                                                 Enregistrer

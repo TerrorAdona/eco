@@ -1,10 +1,12 @@
 "use client"
 import Wrapper from '@/components/Wrapper'
 import Notification from '@/components/Notification'
+import BudgetItem from '@/components/BudgetItem'
 import TransactionItem from '@/components/TransactionItem'
 import { getDashboardData } from '../action'
 import { normalizeTransactionCategory, Transaction } from '@/type'
 import { useUser } from '@clerk/nextjs'
+import Link from 'next/link'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
 type DashboardBudgets = Awaited<ReturnType<typeof getDashboardData>>;
@@ -240,6 +242,18 @@ const Page = () => {
                                 ))}
                             </ul>
                         )}
+                    </div>
+
+                    <div className="card bg-base-100 border border-base-300 p-5">
+                        <h2 className="font-bold text-lg mb-1">Détail par budget</h2>
+                        <p className="text-sm text-base-content/50 mb-4">Prévu, dépensé, restant et pourcentage consommé</p>
+                        <ul className="grid md:grid-cols-2 gap-5">
+                            {budgets.map((budget) => (
+                                <Link href={`/manage/${budget.id}`} key={budget.id}>
+                                    <BudgetItem budget={{ ...budget, createdAt: new Date(budget.createdAt) }} enableHover={1} />
+                                </Link>
+                            ))}
+                        </ul>
                     </div>
                 </div>
             )}

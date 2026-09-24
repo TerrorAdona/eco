@@ -4,6 +4,7 @@ export interface Budget {
     createdAt: Date;
     name: string;
     amount: number;
+    category: string;
     emoji: string | null;
     transactions?: Transaction[];
 }

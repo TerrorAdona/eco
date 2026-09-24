@@ -6,6 +6,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Sakafo",
     amount: 250000,
+    category: "Alimentation",
     emoji: "🍚",
     transactions: [
       {
@@ -56,6 +57,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Transport",
     amount: 180000,
+    category: "Transport",
     emoji: "🚌",
     transactions: [
       {
@@ -106,6 +108,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Téléphone & Internet",
     amount: 120000,
+    category: "Abonnements",
     emoji: "📱",
     transactions: [
       {
@@ -146,6 +149,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Jirama & Maison",
     amount: 200000,
+    category: "Logement",
     emoji: "🏠",
     transactions: [
       {
@@ -186,6 +190,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Études",
     amount: 150000,
+    category: "Études",
     emoji: "🎓",
     transactions: [
       {
@@ -226,6 +231,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Mobile Money",
     amount: 100000,
+    category: "Autres",
     emoji: "💸",
     transactions: [
       {
@@ -256,6 +262,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Loisirs",
     amount: 100000,
+    category: "Loisirs",
     emoji: "🎉",
     transactions: [
       {
@@ -296,6 +303,7 @@ const budgets: Budget[] = [
     createdAt: new Date("2026-09-01"),
     name: "Épargne",
     amount: 300000,
+    category: "Autres",
     emoji: "💰",
     transactions: [
       {

@@ -23,9 +23,10 @@ model Budget {
   id           String       @id @default(uuid())
   name         String
   amount       Float
+  category     String       @default("Autres")
   userId       String
   user         User         @relation(fields: [userId], references: [id])
-  emoji        String?   
+  emoji        String?
   transactions Transaction[]
   createdAt    DateTime     @default(now())
 }
