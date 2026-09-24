@@ -1,6 +1,7 @@
 'use server'
 
 import prisma from "@/lib/prisma"
+import { normalizeTransactionCategory } from "@/type"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -20,6 +21,17 @@ async function assertBudgetOwner(budgetId: string, email: string) {
     if (!budget) throw new Error("Budget non trouvé")
     if (budget.userId !== user.id) throw new Error("Accès non autorisé")
     return { user, budget }
+}
+
+async function assertTransactionOwner(transactionId: string, email: string) {
+    const user = await getUserOrThrow(email)
+    const transaction = await prisma.transaction.findUnique({
+        where: { id: transactionId },
+        include: { budget: { include: { transactions: true } } }
+    })
+    if (!transaction) throw new Error("Transaction non trouvée")
+    if (!transaction.budget || transaction.budget.userId !== user.id) throw new Error("Accès non autorisé")
+    return { user, transaction, budget: transaction.budget }
 }
 
 export async function checkAndAddUser(email: string | undefined) {
@@ -121,10 +133,14 @@ export async function addTransactionToBudget(
     budgetId: string,
     amount: number,
     description: string,
-    email: string
+    email: string,
+    category?: string
 ) {
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
+        const trimmedDescription = description.trim()
+        if (!trimmedDescription) throw new Error("Description requise")
+        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
 
         const totalTransactions = budget.transactions.reduce((acc, t) => {
             return acc + t.amount
@@ -139,7 +155,8 @@ export async function addTransactionToBudget(
         await prisma.transaction.create({
             data: {
                 amount: amount,
-                description: description,
+                description: trimmedDescription,
+                category: normalizeTransactionCategory(category),
                 emoji: budget.emoji,
                 budget: {
                     connect: {
@@ -150,6 +167,41 @@ export async function addTransactionToBudget(
         })
     } catch (error) {
         console.error("Erreur lors de l'ajout de la transaction : ", error)
+        throw error
+    }
+}
+
+export async function updateTransaction(
+    transactionId: string,
+    email: string,
+    description: string,
+    amount: number,
+    category?: string
+) {
+    try {
+        const { budget, transaction } = await assertTransactionOwner(transactionId, email)
+        const trimmedDescription = description.trim()
+        if (!trimmedDescription) throw new Error("Description requise")
+        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+
+        const totalWithoutCurrent = budget.transactions.reduce((acc, t) => {
+            return t.id === transactionId ? acc : acc + t.amount
+        }, 0)
+        if (totalWithoutCurrent + amount > budget.amount) {
+            throw new Error("Le budget est depassé")
+        }
+
+        await prisma.transaction.update({
+            where: { id: transactionId },
+            data: {
+                description: trimmedDescription,
+                amount: amount,
+                category: normalizeTransactionCategory(category ?? transaction.category)
+            }
+        })
+        void transaction
+    } catch (error) {
+        console.error("Erreur lors de la modification de la transaction : ", error)
         throw error
     }
 }
@@ -175,21 +227,7 @@ export const deleteBudget = async (budgetId: string, email: string) => {
 
 export async function deleteTransaction(transactionId: string, email: string) {
     try {
-        const user = await getUserOrThrow(email)
-        const transaction = await prisma.transaction.findUnique({
-            where: {
-                id: transactionId
-            },
-            include: {
-                budget: true
-            }
-        })
-        if (!transaction) {
-            throw new Error("Transaction non trouvée")
-        }
-        if (!transaction.budget || transaction.budget.userId !== user.id) {
-            throw new Error("Accès non autorisé")
-        }
+        await assertTransactionOwner(transactionId, email)
         await prisma.transaction.delete({
             where: {
                 id: transactionId

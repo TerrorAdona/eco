@@ -1,12 +1,12 @@
 "use client"
-import { addTransactionToBudget, deleteBudget, deleteTransaction, getTransactionByBudgetId, updateBudget } from '@/app/action'
+import { addTransactionToBudget, deleteBudget, deleteTransaction, getTransactionByBudgetId, updateBudget, updateTransaction } from '@/app/action'
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
-import { Budget } from '@/type'
+import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeTransactionCategory, TRANSACTION_CATEGORIES, Transaction } from '@/type'
 import { useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
 import Notification from '@/components/Notification'
-import { Send, Trash } from 'lucide-react'
+import { Pencil, Send, Trash } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
@@ -16,11 +16,13 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [budget, setBudget] = useState<Budget>()
     const [description, setDescription] = useState<string>('')
     const [amount, setAmount] = useState<string>('')
+    const [category, setCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
     const [notification, setNotification] = useState<string>("")
     const [showEditBudget, setShowEditBudget] = useState<boolean>(false)
     const [editName, setEditName] = useState<string>('')
     const [editAmount, setEditAmount] = useState<string>('')
     const [editEmoji, setEditEmoji] = useState<string>('')
+    const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
     const closeNotification = () => {
         setNotification("")
     }
@@ -50,8 +52,22 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         getId()
     }, [userEmail, params])
 
-    const handleAddTransaction = async () => {
-        if (!amount || !description) {
+    const resetTransactionForm = () => {
+        setAmount("")
+        setDescription("")
+        setCategory(DEFAULT_TRANSACTION_CATEGORY)
+        setEditingTransactionId(null)
+    }
+
+    const openEditTransaction = (transaction: Transaction) => {
+        setDescription(transaction.description)
+        setAmount(String(transaction.amount))
+        setCategory(normalizeTransactionCategory(transaction.category))
+        setEditingTransactionId(transaction.id)
+    }
+
+    const handleSubmitTransaction = async () => {
+        if (!amount || !description.trim()) {
             setNotification("Veuillez remplir tous les champs")
             return;
         }
@@ -67,15 +83,18 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 setNotification("Veuillez entrer un montant valide")
                 return
             }
-            await addTransactionToBudget(budgetId!, amountNumber, description, email)
-            setNotification("Transaction ajoutée avec succès")
+            if (editingTransactionId) {
+                await updateTransaction(editingTransactionId, email, description, amountNumber, category)
+                setNotification("Transaction modifiée avec succès")
+            } else {
+                await addTransactionToBudget(budgetId!, amountNumber, description, email, category)
+                setNotification("Transaction ajoutée avec succès")
+            }
             fetchBudgetData(budgetId!, email)
-
-            setAmount("")
-            setDescription("")
+            resetTransactionForm()
         }
         catch (error) {
-            console.error("Erreur lors de l'ajout de la transaction : ", error)
+            console.error("Erreur lors de l'enregistrement de la transaction : ", error)
             setNotification(error instanceof Error ? error.message : "Budget dépassé")
         }
     }
@@ -232,8 +251,9 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                     </div>
                                 )}
 
-                                {/* Formulaire */}
+                                {/* Formulaire réutilisé pour création et modification */}
                                 <div className="space-y-4 flex flex-col mt-4">
+                                    <h3 className="font-bold text-sm">{editingTransactionId ? "Modifier la transaction" : "Nouvelle transaction"}</h3>
 
                                     <input
                                         type="text"
@@ -255,12 +275,32 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                         className="input input-bordered w-full"
                                     />
 
+                                    <select
+                                        id="category"
+                                        value={category}
+                                        onChange={(e) => setCategory(e.target.value)}
+                                        className="select select-bordered w-full"
+                                        aria-label="Catégorie de la transaction"
+                                    >
+                                        {TRANSACTION_CATEGORIES.map((c) => (
+                                            <option key={c} value={c}>{c}</option>
+                                        ))}
+                                    </select>
+
                                     <button
-                                        onClick={handleAddTransaction}
+                                        onClick={handleSubmitTransaction}
                                         className="btn btn-primary w-full"
                                     >
-                                        Ajouter une transaction
+                                        {editingTransactionId ? "Mettre à jour la transaction" : "Ajouter une transaction"}
                                     </button>
+                                    {editingTransactionId && (
+                                        <button
+                                            onClick={resetTransactionForm}
+                                            className="btn btn-ghost w-full"
+                                        >
+                                            Annuler la modification
+                                        </button>
+                                    )}
 
                                 </div>
                             </div>
@@ -315,6 +355,10 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                                 {transaction.description}
                                                             </span>
 
+                                                            <span className="badge badge-secondary badge-sm w-fit">
+                                                                {normalizeTransactionCategory(transaction.category)}
+                                                            </span>
+
                                                             <span className="badge badge-outline">
                                                                 {new Date(
                                                                     transaction.createdAt
@@ -349,14 +393,22 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                     >
                                                         -{transaction.amount.toLocaleString("fr-FR")} Ar
                                                     </div>
-                                                    {/* Bouton supprimer (sans action) */}
-                                                    <button
-                                                        className="btn btn-ghost btn-sm"
-                                                        aria-label="Supprimer la transaction"
-                                                        onClick={() => handleDeleteTransaction(transaction.id)}
-                                                    >
-                                                        <Trash className="h-4 w-4" />
-                                                    </button>
+                                                    <div className="flex shrink-0 gap-1">
+                                                        <button
+                                                            className="btn btn-ghost btn-sm"
+                                                            aria-label="Modifier la transaction"
+                                                            onClick={() => openEditTransaction(transaction)}
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-ghost btn-sm"
+                                                            aria-label="Supprimer la transaction"
+                                                            onClick={() => handleDeleteTransaction(transaction.id)}
+                                                        >
+                                                            <Trash className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
 
                                                 </li>
 

@@ -1,4 +1,4 @@
-import { Transaction } from '@/type';
+import { normalizeTransactionCategory, Transaction } from '@/type';
 import Link from 'next/link';
 import React from 'react'
 
@@ -7,20 +7,22 @@ interface TransactionItemProps {
 }
 
 const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
+    const createdAt = new Date(transaction.createdAt)
 
     return (
         <li key={transaction.id} className='flex justify-between items-center'>
             <div className='my-4'>
                 <button className='btn'>
-                    <div className="badge badge-accent">- {transaction.amount} €</div>
+                    <div className="badge badge-accent">- {transaction.amount} Ar</div>
                     {transaction.budgetName}
                 </button>
             </div>
             <div className='md:hidden flex flex-col items-end'>
                 <span className='font-bold text-sm'>{transaction.description}</span>
+                <span className="badge badge-secondary badge-sm">{normalizeTransactionCategory(transaction.category)}</span>
                 <span className='text-sm'>
-                    {transaction.createdAt.toLocaleDateString("fr-FR")} à {" "}
-                    {transaction.createdAt.toLocaleTimeString("fr-FR", {
+                    {createdAt.toLocaleDateString("fr-FR")} à {" "}
+                    {createdAt.toLocaleTimeString("fr-FR", {
                         hour: "2-digit",
                         minute: "2-digit",
                     })}
@@ -28,15 +30,16 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
             </div>
 
 
-            <div className='hidden md:flex'>
+            <div className='hidden md:flex items-center gap-2'>
                 <span className='font-bold text-sm'>
                     {transaction.description}
                 </span>
+                <span className="badge badge-secondary badge-sm">{normalizeTransactionCategory(transaction.category)}</span>
             </div>
 
             <div className='hidden md:flex'>
-                {transaction.createdAt.toLocaleDateString("fr-FR")} à {" "}
-                {transaction.createdAt.toLocaleTimeString("fr-FR", {
+                {createdAt.toLocaleDateString("fr-FR")} à {" "}
+                {createdAt.toLocaleTimeString("fr-FR", {
                     hour: "2-digit",
                     minute: "2-digit",
                 })}

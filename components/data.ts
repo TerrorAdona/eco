@@ -16,6 +16,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-03"),
         budgetName: "Sakafo",
         budgetId: "1",
+        category: "Alimentation",
       },
       {
         id: "t2",
@@ -25,6 +26,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-05"),
         budgetName: "Sakafo",
         budgetId: "1",
+        category: "Alimentation",
       },
       {
         id: "t3",
@@ -34,6 +36,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-07"),
         budgetName: "Sakafo",
         budgetId: "1",
+        category: "Alimentation",
       },
       {
         id: "t4",
@@ -43,6 +46,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-10"),
         budgetName: "Sakafo",
         budgetId: "1",
+        category: "Alimentation",
       },
     ],
   },
@@ -62,6 +66,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-02"),
         budgetName: "Transport",
         budgetId: "2",
+        category: "Transport",
       },
       {
         id: "t6",
@@ -71,6 +76,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-06"),
         budgetName: "Transport",
         budgetId: "2",
+        category: "Transport",
       },
       {
         id: "t7",
@@ -80,6 +86,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-09"),
         budgetName: "Transport",
         budgetId: "2",
+        category: "Transport",
       },
       {
         id: "t8",
@@ -89,6 +96,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-12"),
         budgetName: "Transport",
         budgetId: "2",
+        category: "Transport",
       },
     ],
   },
@@ -108,6 +116,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-03"),
         budgetName: "Téléphone & Internet",
         budgetId: "3",
+        category: "Abonnements",
       },
       {
         id: "t10",
@@ -117,6 +126,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-05"),
         budgetName: "Téléphone & Internet",
         budgetId: "3",
+        category: "Abonnements",
       },
       {
         id: "t11",
@@ -126,6 +136,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-11"),
         budgetName: "Téléphone & Internet",
         budgetId: "3",
+        category: "Abonnements",
       },
     ],
   },
@@ -145,6 +156,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-04"),
         budgetName: "Jirama & Maison",
         budgetId: "4",
+        category: "Logement",
       },
       {
         id: "t13",
@@ -154,6 +166,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-06"),
         budgetName: "Jirama & Maison",
         budgetId: "4",
+        category: "Logement",
       },
       {
         id: "t14",
@@ -163,6 +176,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-09"),
         budgetName: "Jirama & Maison",
         budgetId: "4",
+        category: "Logement",
       },
     ],
   },
@@ -182,6 +196,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-02"),
         budgetName: "Études",
         budgetId: "5",
+        category: "Études",
       },
       {
         id: "t16",
@@ -191,6 +206,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-05"),
         budgetName: "Études",
         budgetId: "5",
+        category: "Études",
       },
       {
         id: "t17",
@@ -200,6 +216,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-08"),
         budgetName: "Études",
         budgetId: "5",
+        category: "Études",
       },
     ],
   },
@@ -219,6 +236,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-03"),
         budgetName: "Mobile Money",
         budgetId: "6",
+        category: "Autres",
       },
       {
         id: "t19",
@@ -228,6 +246,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-07"),
         budgetName: "Mobile Money",
         budgetId: "6",
+        category: "Autres",
       },
     ],
   },
@@ -247,6 +266,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-06"),
         budgetName: "Loisirs",
         budgetId: "7",
+        category: "Loisirs",
       },
       {
         id: "t21",
@@ -256,6 +276,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-09"),
         budgetName: "Loisirs",
         budgetId: "7",
+        category: "Loisirs",
       },
       {
         id: "t22",
@@ -265,6 +286,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-13"),
         budgetName: "Loisirs",
         budgetId: "7",
+        category: "Loisirs",
       },
     ],
   },
@@ -284,6 +306,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-01"),
         budgetName: "Épargne",
         budgetId: "8",
+        category: "Autres",
       },
       {
         id: "t24",
@@ -293,6 +316,7 @@ const budgets: Budget[] = [
         createdAt: new Date("2026-09-10"),
         budgetName: "Épargne",
         budgetId: "8",
+        category: "Autres",
       },
     ],
   },

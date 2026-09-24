@@ -6,7 +6,7 @@ import { getTransactionsByEmailAndPeriod } from '../action'
 import Wrapper from '@/components/Wrapper'
 import TransactionItem from '@/components/TransactionItem'
 
-const page = () => {
+const Page = () => {
 
     const { user } = useUser()
     const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -16,20 +16,15 @@ const page = () => {
         if (user?.primaryEmailAddress?.emailAddress) {
             setLoading(true)
             try {
-                console.log("Fetching transactions for period:", period);
                 const transactionsData = await getTransactionsByEmailAndPeriod(user.primaryEmailAddress.emailAddress, period)
-                console.log("Transactions fetched:", transactionsData.length);
-                setTransactions(transactionsData)
+                setTransactions(transactionsData.map((t) => ({ ...t, createdAt: new Date(t.createdAt) })))
             } catch (error) {
-                console.log("Erreur lors de la récupération des transactions ", error);
+                console.error("Erreur lors de la récupération des transactions ", error);
             } finally {
                 setLoading(false)
-                console.log("Loading set to false");
             }
         } else {
-            // If no user email, set loading to false and show no transactions
             setLoading(false)
-            console.log("No user email available, setting loading to false")
         }
     }
 
@@ -80,4 +75,4 @@ const page = () => {
     )
 }
 
-export default page
+export default Page
