@@ -42,3 +42,13 @@ export interface Transaction {
     budgetName?: string;
     budgetId?: string | null;
 }
+
+export interface SavingsGoal {
+    id: string;
+    name: string;
+    targetAmount: number;
+    savedAmount: number;
+    targetDate: Date;
+    emoji: string | null;
+    createdAt: Date;
+}

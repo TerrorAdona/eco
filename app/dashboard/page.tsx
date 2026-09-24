@@ -2,9 +2,10 @@
 import Wrapper from '@/components/Wrapper'
 import Notification from '@/components/Notification'
 import BudgetItem from '@/components/BudgetItem'
+import SavingsGoalItem from '@/components/SavingsGoalItem'
 import TransactionItem from '@/components/TransactionItem'
-import { getDashboardData } from '../action'
-import { normalizeTransactionCategory, Transaction } from '@/type'
+import { getDashboardData, getSavingsGoalsByUser } from '../action'
+import { normalizeTransactionCategory, SavingsGoal, Transaction } from '@/type'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -23,6 +24,7 @@ const formatAmount = (value: number) => `${value.toLocaleString("fr-FR")} Ar`;
 const Page = () => {
     const { user } = useUser()
     const [budgets, setBudgets] = useState<DashboardBudgets>([])
+    const [goals, setGoals] = useState<SavingsGoal[]>([])
     const [period, setPeriod] = useState<string>("last30")
     const [loading, setLoading] = useState<boolean>(true)
     const [notification, setNotification] = useState<string>("")
@@ -40,8 +42,12 @@ const Page = () => {
         }
         setLoading(true)
         try {
-            const data = await getDashboardData(email)
+            const [data, goalsData] = await Promise.all([
+                getDashboardData(email),
+                getSavingsGoalsByUser(email),
+            ])
             setBudgets(data)
+            setGoals(goalsData.map((g) => ({ ...g, targetDate: new Date(g.targetDate), createdAt: new Date(g.createdAt) })))
         } catch (error: unknown) {
             setNotification(getErrorMessage(error, "Erreur lors de la récupération du tableau de bord"))
         } finally {
@@ -103,6 +109,10 @@ const Page = () => {
         }
         const maxBucket = buckets.reduce((acc, b) => Math.max(acc, b.total), 0)
 
+        const totalGoalTarget = goals.reduce((acc, g) => acc + g.targetAmount, 0)
+        const totalGoalSaved = goals.reduce((acc, g) => acc + g.savedAmount, 0)
+        const goalPercentage = totalGoalTarget > 0 ? Math.round((totalGoalSaved / totalGoalTarget) * 100) : 0
+
         return {
             totalBudgets,
             totalSpentPeriod,
@@ -114,8 +124,12 @@ const Page = () => {
             buckets,
             maxBucket,
             periodLabel: config.label.toLowerCase(),
+            totalGoalTarget,
+            totalGoalSaved,
+            goalPercentage: Math.min(goalPercentage, 100),
+            topGoals: goals.slice(0, 3),
         }
-    }, [budgets, period])
+    }, [budgets, goals, period])
 
     return (
         <Wrapper>
@@ -241,6 +255,35 @@ const Page = () => {
                                     <TransactionItem key={transaction.id} transaction={transaction} />
                                 ))}
                             </ul>
+                        )}
+                    </div>
+
+                    <div className="card bg-base-100 border border-base-300 p-5">
+                        <div className="flex items-center justify-between mb-1">
+                            <h2 className="font-bold text-lg">Objectifs d&apos;épargne</h2>
+                            <Link href="/objectifs" className="btn btn-sm btn-ghost">Voir tout</Link>
+                        </div>
+                        {goals.length === 0 ? (
+                            <p className="text-sm text-base-content/50">Aucun objectif pour le moment.</p>
+                        ) : (
+                            <>
+                                <p className="text-sm text-base-content/50 mb-4">
+                                    {formatAmount(stats.totalGoalSaved)} épargnés sur {formatAmount(stats.totalGoalTarget)} ({stats.goalPercentage}%)
+                                </p>
+                                <div className="w-full bg-base-300 rounded-full h-2.5 mb-4">
+                                    <div
+                                        className="bg-accent h-2.5 rounded-full transition-all duration-500"
+                                        style={{ width: `${stats.goalPercentage}%` }}
+                                    ></div>
+                                </div>
+                                <ul className="grid md:grid-cols-2 gap-5">
+                                    {stats.topGoals.map((goal) => (
+                                        <Link href="/objectifs" key={goal.id}>
+                                            <SavingsGoalItem goal={goal} enableHover={1} />
+                                        </Link>
+                                    ))}
+                                </ul>
+                            </>
                         )}
                     </div>
 

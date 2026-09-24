@@ -50,6 +50,7 @@ const Navbar = () => {
                                 <div className="hidden md:flex items-center gap-2">
                                     <Link href={"/budgets"} className="btn btn-ghost btn-sm">Mes budgets</Link>
                                     <Link href={"/transactions"} className="btn btn-ghost btn-sm">Mes transactions</Link>
+                                    <Link href={"/objectifs"} className="btn btn-ghost btn-sm">Objectifs</Link>
                                     <Link href={"/dashboard"} className="btn btn-ghost btn-sm">Tableau de bord</Link>
                                 </div>
                                 <UserButton />
@@ -63,6 +64,7 @@ const Navbar = () => {
                                     <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
                                         <li><Link href={"/budgets"}>Mes budgets</Link></li>
                                         <li><Link href={"/transactions"}>Mes transactions</Link></li>
+                                        <li><Link href={"/objectifs"}>Objectifs</Link></li>
                                         <li><Link href={"/dashboard"}>Tableau de bord</Link></li>
                                     </ul>
                                 </div>

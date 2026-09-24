@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/budgets(.*)',
   '/manage(.*)',
+  '/objectifs(.*)',
   '/transactions(.*)',
 ])
 

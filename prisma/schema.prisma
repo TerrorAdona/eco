@@ -17,6 +17,19 @@ model User {
   email         String       @unique
   createdAt     DateTime     @default(now())
   budgets       Budget[]
+  savingsGoals  SavingsGoal[]
+}
+
+model SavingsGoal {
+  id           String   @id @default(uuid())
+  name         String
+  targetAmount Float
+  savedAmount  Float    @default(0)
+  targetDate   DateTime
+  emoji        String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  createdAt    DateTime @default(now())
 }
 
 model Budget {

@@ -241,6 +241,92 @@ export async function deleteTransaction(transactionId: string, email: string) {
     }
 }
 
+async function assertSavingsGoalOwner(goalId: string, email: string) {
+    const user = await getUserOrThrow(email)
+    const goal = await prisma.savingsGoal.findUnique({
+        where: { id: goalId }
+    })
+    if (!goal) throw new Error("Objectif non trouvé")
+    if (goal.userId !== user.id) throw new Error("Accès non autorisé")
+    return { user, goal }
+}
+
+function parseGoalInput(name: string, targetAmount: number, savedAmount: number, targetDate: string) {
+    const trimmedName = name.trim()
+    if (!trimmedName) throw new Error("Nom de l'objectif requis")
+    if (isNaN(targetAmount) || targetAmount <= 0) throw new Error("Montant cible invalide")
+    if (isNaN(savedAmount) || savedAmount < 0) throw new Error("Montant épargné invalide")
+    if (savedAmount > targetAmount) throw new Error("Le montant épargné dépasse la cible")
+    const parsedDate = new Date(targetDate)
+    if (isNaN(parsedDate.getTime())) throw new Error("Date cible invalide")
+    return { trimmedName, parsedDate }
+}
+
+export async function addSavingsGoal(email: string, name: string, targetAmount: number, savedAmount: number, targetDate: string, selectedEmoji: string) {
+    try {
+        const user = await getUserOrThrow(email)
+        const { trimmedName, parsedDate } = parseGoalInput(name, targetAmount, savedAmount, targetDate)
+        await prisma.savingsGoal.create({
+            data: {
+                name: trimmedName,
+                targetAmount: targetAmount,
+                savedAmount: savedAmount,
+                targetDate: parsedDate,
+                emoji: selectedEmoji,
+                userId: user.id
+            }
+        })
+    } catch (error) {
+        console.error("Erreur lors de l'ajout de l'objectif : ", error)
+        throw error
+    }
+}
+
+export async function getSavingsGoalsByUser(email: string) {
+    try {
+        const user = await getUserOrThrow(email)
+        return await prisma.savingsGoal.findMany({
+            where: { userId: user.id },
+            orderBy: { targetDate: "asc" }
+        })
+    } catch (error) {
+        console.error("Erreur lors de la récupération des objectifs : ", error)
+        throw error
+    }
+}
+
+export async function updateSavingsGoal(email: string, goalId: string, name: string, targetAmount: number, savedAmount: number, targetDate: string, selectedEmoji: string) {
+    try {
+        await assertSavingsGoalOwner(goalId, email)
+        const { trimmedName, parsedDate } = parseGoalInput(name, targetAmount, savedAmount, targetDate)
+        await prisma.savingsGoal.update({
+            where: { id: goalId },
+            data: {
+                name: trimmedName,
+                targetAmount: targetAmount,
+                savedAmount: savedAmount,
+                targetDate: parsedDate,
+                emoji: selectedEmoji
+            }
+        })
+    } catch (error) {
+        console.error("Erreur lors de la modification de l'objectif : ", error)
+        throw error
+    }
+}
+
+export async function deleteSavingsGoal(goalId: string, email: string) {
+    try {
+        await assertSavingsGoalOwner(goalId, email)
+        await prisma.savingsGoal.delete({
+            where: { id: goalId }
+        })
+    } catch (error) {
+        console.error("Erreur lors de la suppression de l'objectif : ", error)
+        throw error
+    }
+}
+
 export async function getDashboardData(email: string) {
     try {
         if (!email) throw new Error("Utilisateur non trouvé")
