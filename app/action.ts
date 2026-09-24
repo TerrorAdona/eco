@@ -239,6 +239,27 @@ export async function deleteTransaction(transactionId: string, email: string) {
     }
 }
 
+export async function getDashboardData(email: string) {
+    try {
+        if (!email) throw new Error("Utilisateur non trouvé")
+        const budgets = await prisma.budget.findMany({
+            where: {
+                user: { email: email }
+            },
+            include: {
+                transactions: {
+                    orderBy: { createdAt: "desc" }
+                }
+            },
+            orderBy: { createdAt: "desc" }
+        })
+        return budgets
+    } catch (error) {
+        console.error("Erreur lors de la récupération des données du tableau de bord : ", error)
+        throw error
+    }
+}
+
 export async function getTransactionsByEmailAndPeriod(email: string, period: string) {
     try {
         const now = new Date();

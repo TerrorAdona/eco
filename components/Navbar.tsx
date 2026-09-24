@@ -61,9 +61,9 @@ const Navbar = () => {
                                         Menu
                                     </label>
                                     <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
-                                        <li><a href="#">Mes budgets</a></li>
-                                        <li><a href="#">Mes transactions</a></li>
-                                        <li><a href="#">Tableau de bord</a></li>
+                                        <li><Link href={"/budgets"}>Mes budgets</Link></li>
+                                        <li><Link href={"/transactions"}>Mes transactions</Link></li>
+                                        <li><Link href={"/dashboard"}>Tableau de bord</Link></li>
                                     </ul>
                                 </div>
                             </div>
