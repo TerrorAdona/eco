@@ -6,6 +6,7 @@ import SavingsGoalItem from '@/components/SavingsGoalItem'
 import TransactionItem from '@/components/TransactionItem'
 import { getDashboardData, getSavingsGoalsByUser } from '../action'
 import { normalizeTransactionCategory, SavingsGoal, Transaction } from '@/type'
+import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert } from '@/lib/budget-alerts'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -112,6 +113,13 @@ const Page = () => {
         const totalGoalTarget = goals.reduce((acc, g) => acc + g.targetAmount, 0)
         const totalGoalSaved = goals.reduce((acc, g) => acc + g.savedAmount, 0)
         const goalPercentage = totalGoalTarget > 0 ? Math.round((totalGoalSaved / totalGoalTarget) * 100) : 0
+        const alerts = budgets
+            .map((budget) => {
+                const spent = budget.transactions.reduce((acc, t) => acc + t.amount, 0)
+                return { budget, alert: getBudgetAlert(spent, budget.amount) }
+            })
+            .filter(hasBudgetAlert)
+            .sort((a, b) => b.alert.percentage - a.alert.percentage)
 
         return {
             totalBudgets,
@@ -128,6 +136,7 @@ const Page = () => {
             totalGoalSaved,
             goalPercentage: Math.min(goalPercentage, 100),
             topGoals: goals.slice(0, 3),
+            alerts,
         }
     }, [budgets, goals, period])
 
@@ -187,6 +196,33 @@ const Page = () => {
                             className="bg-primary h-2.5 rounded-full transition-all duration-500"
                             style={{ width: `${Math.min(stats.globalPercentage, 100)}%` }}
                         ></div>
+                    </div>
+
+                    <div className="card bg-base-100 border border-base-300 p-5">
+                        <h2 className="font-bold text-lg mb-1">Alertes budgets</h2>
+                        <p className="text-sm text-base-content/50 mb-2">Seuils 80 % / 100 % / dépassement, tous budgets confondus</p>
+                        {stats.alerts.length === 0 ? (
+                            <p className="text-sm text-success font-medium">Aucune alerte, budgets sous contrôle.</p>
+                        ) : (
+                            <ul className="divide-y divide-base-300">
+                                {stats.alerts.map(({ budget, alert }) => (
+                                    <li key={budget.id} className="flex items-center justify-between gap-3 py-2">
+                                        <Link href={`/manage/${budget.id}`} className="flex items-center gap-3 min-w-0">
+                                            <span className="text-2xl shrink-0">{budget.emoji}</span>
+                                            <span className="min-w-0">
+                                                <span className="font-medium block truncate">{budget.name}</span>
+                                                <span className="text-xs text-base-content/50">
+                                                    {formatAmount(alert.spent)} / {formatAmount(budget.amount)}
+                                                </span>
+                                            </span>
+                                        </Link>
+                                        <span className={`badge shrink-0 ${alert.level === "over" ? "badge-error" : alert.level === "critical" ? "badge-warning" : "badge-info"}`}>
+                                            {BUDGET_ALERT_LABELS[alert.level]} · {alert.percentage}%
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

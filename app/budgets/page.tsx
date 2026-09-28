@@ -3,7 +3,8 @@
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
 import EmojiPicker from 'emoji-picker-react'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert } from '@/lib/budget-alerts'
 import { addBudget, deleteBudget, getBudgetsByUser, updateBudget } from '../action'
 import Notification from '@/components/Notification'
 import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeTransactionCategory, TRANSACTION_CATEGORIES } from '@/type'
@@ -84,6 +85,28 @@ const Page = () => {
     useEffect(() => {
         fetchBudgets()
     }, [fetchBudgets])
+
+    const budgetAlerts = useMemo(() => {
+        return budgets
+            .map((budget) => {
+                const spent = (budget.transactions ?? []).reduce((acc, t) => acc + t.amount, 0)
+                const alert = getBudgetAlert(spent, budget.amount)
+                return { budget, alert }
+            })
+            .filter(hasBudgetAlert)
+            .sort((a, b) => b.alert.percentage - a.alert.percentage)
+    }, [budgets])
+
+    const alertedRef = useRef<string>("")
+    useEffect(() => {
+        if (notification !== "" || budgetAlerts.length === 0) return
+        const key = budgetAlerts.map(({ budget, alert }) => `${budget.id}:${alert.percentage}`).join("|")
+        if (alertedRef.current === key) return
+        alertedRef.current = key
+        const worst = budgetAlerts[0]
+        const extra = budgetAlerts.length > 1 ? ` (+${budgetAlerts.length - 1} autre${budgetAlerts.length > 2 ? "s" : ""})` : ""
+        setNotification(`${BUDGET_ALERT_LABELS[worst.alert.level]} : "${worst.budget.name}" à ${worst.alert.percentage}%${extra}`)
+    }, [budgets, budgetAlerts, notification])
 
     const handleSubmitBudget = async () => {
         try {
