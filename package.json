@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
     "postinstall": "prisma skills sync || exit 0",
     "contract:emit": "prisma contract emit"
   },
@@ -32,7 +33,8 @@
     "prisma": "^5.21.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.19.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   },
   "prisma": {
     "seed": "./node_modules/.bin/tsx prisma/seed.ts"
