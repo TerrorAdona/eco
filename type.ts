@@ -52,3 +52,56 @@ export interface SavingsGoal {
     emoji: string | null;
     createdAt: Date;
 }
+
+export const RECURRING_FREQUENCIES = [
+    "WEEKLY",
+    "MONTHLY",
+    "YEARLY",
+] as const;
+
+export type RecurringFrequency = typeof RECURRING_FREQUENCIES[number];
+
+export const RECURRING_FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
+    WEEKLY: "Hebdomadaire",
+    MONTHLY: "Mensuelle",
+    YEARLY: "Annuelle",
+};
+
+export function normalizeRecurringFrequency(value: string | null | undefined): RecurringFrequency {
+    return (RECURRING_FREQUENCIES as readonly string[]).includes(value ?? "")
+        ? (value as RecurringFrequency)
+        : "MONTHLY";
+}
+
+export const RECURRING_TYPES = [
+    "DEPENSE",
+    "REVENU",
+] as const;
+
+export type RecurringType = typeof RECURRING_TYPES[number];
+
+export const RECURRING_TYPE_LABELS: Record<RecurringType, string> = {
+    DEPENSE: "Dépense",
+    REVENU: "Revenu",
+};
+
+export function normalizeRecurringType(value: string | null | undefined): RecurringType {
+    return (RECURRING_TYPES as readonly string[]).includes(value ?? "")
+        ? (value as RecurringType)
+        : "DEPENSE";
+}
+
+export interface RecurringTransaction {
+    id: string;
+    description: string;
+    amount: number;
+    type: string;
+    category: string;
+    frequency: string;
+    startDate: Date;
+    endDate: Date | null;
+    isActive: boolean;
+    budgetId: string | null;
+    budgetName?: string;
+    createdAt: Date;
+}

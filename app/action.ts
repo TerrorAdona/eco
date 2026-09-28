@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from "@/lib/prisma"
-import { normalizeTransactionCategory } from "@/type"
+import { normalizeRecurringFrequency, normalizeRecurringType, normalizeTransactionCategory } from "@/type"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -323,6 +323,128 @@ export async function deleteSavingsGoal(goalId: string, email: string) {
         })
     } catch (error) {
         console.error("Erreur lors de la suppression de l'objectif : ", error)
+        throw error
+    }
+}
+
+async function assertRecurringOwner(recurringId: string, email: string) {
+    const user = await getUserOrThrow(email)
+    const recurring = await prisma.recurringTransaction.findUnique({
+        where: { id: recurringId }
+    })
+    if (!recurring) throw new Error("Transaction récurrente non trouvée")
+    if (recurring.userId !== user.id) throw new Error("Accès non autorisé")
+    return { user, recurring }
+}
+
+function parseRecurringInput(description: string, amount: number, type: string, category: string, frequency: string, startDate: string, endDate?: string | null) {
+    const trimmedDescription = description.trim()
+    if (!trimmedDescription) throw new Error("Description requise")
+    if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+    const parsedStart = new Date(startDate)
+    if (isNaN(parsedStart.getTime())) throw new Error("Date de début invalide")
+    let parsedEnd: Date | null = null
+    if (endDate) {
+        parsedEnd = new Date(endDate)
+        if (isNaN(parsedEnd.getTime())) throw new Error("Date de fin invalide")
+        if (parsedEnd.getTime() < parsedStart.getTime()) throw new Error("La date de fin doit suivre la date de début")
+    }
+    return { trimmedDescription, parsedStart, parsedEnd }
+}
+
+async function resolveRecurringBudget(email: string, budgetId?: string | null) {
+    if (!budgetId || budgetId === "none") return null
+    const { budget } = await assertBudgetOwner(budgetId, email)
+    return budget.id
+}
+
+export async function addRecurringTransaction(email: string, description: string, amount: number, type: string, category: string, frequency: string, startDate: string, endDate: string | null, budgetId: string | null) {
+    try {
+        const user = await getUserOrThrow(email)
+        const { trimmedDescription, parsedStart, parsedEnd } = parseRecurringInput(description, amount, type, category, frequency, startDate, endDate)
+        const resolvedBudgetId = await resolveRecurringBudget(email, budgetId)
+        await prisma.recurringTransaction.create({
+            data: {
+                description: trimmedDescription,
+                amount: amount,
+                type: normalizeRecurringType(type),
+                category: normalizeTransactionCategory(category),
+                frequency: normalizeRecurringFrequency(frequency),
+                startDate: parsedStart,
+                endDate: parsedEnd,
+                budgetId: resolvedBudgetId,
+                userId: user.id
+            }
+        })
+    } catch (error) {
+        console.error("Erreur lors de l'ajout de la transaction récurrente : ", error)
+        throw error
+    }
+}
+
+export async function getRecurringTransactionsByUser(email: string) {
+    try {
+        const user = await getUserOrThrow(email)
+        const items = await prisma.recurringTransaction.findMany({
+            where: { userId: user.id },
+            include: { budget: { select: { id: true, name: true } } },
+            orderBy: { startDate: "asc" }
+        })
+        return items.map((item) => ({
+            ...item,
+            budgetName: item.budget?.name ?? ""
+        }))
+    } catch (error) {
+        console.error("Erreur lors de la récupération des transactions récurrentes : ", error)
+        throw error
+    }
+}
+
+export async function updateRecurringTransaction(email: string, recurringId: string, description: string, amount: number, type: string, category: string, frequency: string, startDate: string, endDate: string | null, budgetId: string | null) {
+    try {
+        await assertRecurringOwner(recurringId, email)
+        const { trimmedDescription, parsedStart, parsedEnd } = parseRecurringInput(description, amount, type, category, frequency, startDate, endDate)
+        const resolvedBudgetId = await resolveRecurringBudget(email, budgetId)
+        await prisma.recurringTransaction.update({
+            where: { id: recurringId },
+            data: {
+                description: trimmedDescription,
+                amount: amount,
+                type: normalizeRecurringType(type),
+                category: normalizeTransactionCategory(category),
+                frequency: normalizeRecurringFrequency(frequency),
+                startDate: parsedStart,
+                endDate: parsedEnd,
+                budgetId: resolvedBudgetId
+            }
+        })
+    } catch (error) {
+        console.error("Erreur lors de la modification de la transaction récurrente : ", error)
+        throw error
+    }
+}
+
+export async function toggleRecurringTransaction(email: string, recurringId: string) {
+    try {
+        const { recurring } = await assertRecurringOwner(recurringId, email)
+        await prisma.recurringTransaction.update({
+            where: { id: recurringId },
+            data: { isActive: !recurring.isActive }
+        })
+    } catch (error) {
+        console.error("Erreur lors du changement d'état de la transaction récurrente : ", error)
+        throw error
+    }
+}
+
+export async function deleteRecurringTransaction(recurringId: string, email: string) {
+    try {
+        await assertRecurringOwner(recurringId, email)
+        await prisma.recurringTransaction.delete({
+            where: { id: recurringId }
+        })
+    } catch (error) {
+        console.error("Erreur lors de la suppression de la transaction récurrente : ", error)
         throw error
     }
 }

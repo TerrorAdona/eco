@@ -18,6 +18,24 @@ model User {
   createdAt     DateTime     @default(now())
   budgets       Budget[]
   savingsGoals  SavingsGoal[]
+  recurringTransactions RecurringTransaction[]
+}
+
+model RecurringTransaction {
+  id          String    @id @default(uuid())
+  description String
+  amount      Float
+  type        String    @default("DEPENSE")
+  category    String    @default("Autres")
+  frequency   String    @default("MONTHLY")
+  startDate   DateTime
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  budgetId    String?
+  budget      Budget?   @relation(fields: [budgetId], references: [id], onDelete: SetNull)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
 }
 
 model SavingsGoal {
@@ -41,6 +59,7 @@ model Budget {
   user         User         @relation(fields: [userId], references: [id])
   emoji        String?
   transactions Transaction[]
+  recurringTransactions RecurringTransaction[]
   createdAt    DateTime     @default(now())
 }
 

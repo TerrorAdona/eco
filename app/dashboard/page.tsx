@@ -10,7 +10,7 @@ import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
-type DashboardBudgets = Awaited<ReturnType<typeof getDashboardData>>;
+type DashboardBudgets = Awaited<ReturnType<typeof getDashboardData>>
 
 const PERIODS: Record<string, { label: string; days: number; bucketDays: number }> = {
     last7: { label: "Derniers 7 jours", days: 7, bucketDays: 1 },
@@ -242,14 +242,13 @@ const Page = () => {
                                 </>
                             )}
                         </div>
-                    </div>
 
-                    <div className="card bg-base-100 border border-base-300 p-5">
-                        <h2 className="font-bold text-lg mb-1">Dépenses récentes</h2>
-                        <p className="text-sm text-base-content/50 mb-2">5 dernières transactions</p>
-                        {stats.recent.length === 0 ? (
-                            <p className="text-sm text-base-content/50">Aucune transaction sur cette période.</p>
-                        ) : (
+                        <div className="card bg-base-100 border border-base-300 p-5">
+                            <h2 className="font-bold text-lg mb-1">Dépenses récentes</h2>
+                            <p className="text-sm text-base-content/50 mb-2">5 dernières transactions</p>
+                            {stats.recent.length === 0 ? (
+                                <p className="text-sm text-base-content/50">Aucune transaction sur cette période.</p>
+                            ) : (
                             <ul className="divide-y divide-base-300">
                                 {stats.recent.map((transaction) => (
                                     <TransactionItem key={transaction.id} transaction={transaction} />
@@ -258,48 +257,49 @@ const Page = () => {
                         )}
                     </div>
 
-                    <div className="card bg-base-100 border border-base-300 p-5">
-                        <div className="flex items-center justify-between mb-1">
-                            <h2 className="font-bold text-lg">Objectifs d&apos;épargne</h2>
-                            <Link href="/objectifs" className="btn btn-sm btn-ghost">Voir tout</Link>
+                        <div className="card bg-base-100 border border-base-300 p-5">
+                            <div className="flex items-center justify-between mb-1">
+                                <h2 className="font-bold text-lg">Objectifs d&apos;épargne</h2>
+                                <Link href="/objectifs" className="btn btn-sm btn-ghost">Voir tout</Link>
+                            </div>
+                            {goals.length === 0 ? (
+                                <p className="text-sm text-base-content/50">Aucun objectif pour le moment.</p>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-base-content/50 mb-4">
+                                        {formatAmount(stats.totalGoalSaved)} épargnés sur {formatAmount(stats.totalGoalTarget)} ({stats.goalPercentage}%)
+                                    </p>
+                                    <div className="w-full bg-base-300 rounded-full h-2.5 mb-4">
+                                        <div
+                                            className="bg-accent h-2.5 rounded-full transition-all duration-500"
+                                            style={{ width: `${stats.goalPercentage}%` }}
+                                        ></div>
+                                    </div>
+                                    <ul className="grid md:grid-cols-2 gap-5">
+                                        {stats.topGoals.map((goal) => (
+                                            <Link href="/objectifs" key={goal.id}>
+                                                <SavingsGoalItem goal={goal} enableHover={1} />
+                                            </Link>
+                                        ))}
+                                    </ul>
+                                </>
+                            )}
                         </div>
-                        {goals.length === 0 ? (
-                            <p className="text-sm text-base-content/50">Aucun objectif pour le moment.</p>
-                        ) : (
-                            <>
-                                <p className="text-sm text-base-content/50 mb-4">
-                                    {formatAmount(stats.totalGoalSaved)} épargnés sur {formatAmount(stats.totalGoalTarget)} ({stats.goalPercentage}%)
-                                </p>
-                                <div className="w-full bg-base-300 rounded-full h-2.5 mb-4">
-                                    <div
-                                        className="bg-accent h-2.5 rounded-full transition-all duration-500"
-                                        style={{ width: `${stats.goalPercentage}%` }}
-                                    ></div>
-                                </div>
-                                <ul className="grid md:grid-cols-2 gap-5">
-                                    {stats.topGoals.map((goal) => (
-                                        <Link href="/objectifs" key={goal.id}>
-                                            <SavingsGoalItem goal={goal} enableHover={1} />
-                                        </Link>
-                                    ))}
-                                </ul>
-                            </>
-                        )}
-                    </div>
 
-                    <div className="card bg-base-100 border border-base-300 p-5">
-                        <h2 className="font-bold text-lg mb-1">Détail par budget</h2>
-                        <p className="text-sm text-base-content/50 mb-4">Prévu, dépensé, restant et pourcentage consommé</p>
-                        <ul className="grid md:grid-cols-2 gap-5">
-                            {budgets.map((budget) => (
-                                <Link href={`/manage/${budget.id}`} key={budget.id}>
-                                    <BudgetItem budget={{ ...budget, createdAt: new Date(budget.createdAt) }} enableHover={1} />
-                                </Link>
-                            ))}
-                        </ul>
+                        <div className="card bg-base-100 border border-base-300 p-5">
+                            <h2 className="font-bold text-lg mb-1">Détail par budget</h2>
+                            <p className="text-sm text-base-content/50 mb-4">Prévu, dépensé, restant et pourcentage consommé</p>
+                            <ul className="grid md:grid-cols-2 gap-5">
+                                {budgets.map((budget) => (
+                                    <Link href={`/manage/${budget.id}`} key={budget.id}>
+                                        <BudgetItem budget={{ ...budget, createdAt: new Date(budget.createdAt) }} enableHover={1} />
+                                    </Link>
+                                ))}
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            )}
+                )}
         </Wrapper>
     )
 }
