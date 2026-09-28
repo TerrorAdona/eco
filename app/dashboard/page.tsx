@@ -7,6 +7,7 @@ import TransactionItem from '@/components/TransactionItem'
 import { getDashboardData, getSavingsGoalsByUser } from '../action'
 import { normalizeTransactionCategory, SavingsGoal, Transaction } from '@/type'
 import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert } from '@/lib/budget-alerts'
+import { comparePeriods, detectUnusualSpending } from '@/lib/analytics'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
@@ -80,6 +81,16 @@ const Page = () => {
             .filter((t) => t.createdAt >= dateLimit)
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
         const totalSpentPeriod = periodTransactions.reduce((acc, t) => acc + t.amount, 0)
+        const previousLimit = new Date(dateLimit)
+        previousLimit.setDate(dateLimit.getDate() - config.days)
+        const previousTransactions = allTransactions.filter((t) => t.createdAt >= previousLimit && t.createdAt < dateLimit)
+        const comparison = comparePeriods(
+            totalSpentPeriod,
+            previousTransactions.reduce((acc, t) => acc + t.amount, 0),
+            periodTransactions.length,
+            previousTransactions.length
+        )
+        const unusual = detectUnusualSpending(periodTransactions)
 
         const byCategory = new Map<string, number>()
         for (const t of periodTransactions) {
@@ -137,6 +148,8 @@ const Page = () => {
             goalPercentage: Math.min(goalPercentage, 100),
             topGoals: goals.slice(0, 3),
             alerts,
+            comparison,
+            unusual,
         }
     }, [budgets, goals, period])
 
@@ -276,6 +289,46 @@ const Page = () => {
                                         <span>{stats.buckets[stats.buckets.length - 1]?.label}</span>
                                     </div>
                                 </>
+                            )}
+                        </div>
+
+                        <div className="card bg-base-100 border border-base-300 p-5">
+                            <h2 className="font-bold text-lg">Comparaison de période</h2>
+                            <p className="text-sm text-base-content/50 mb-4">Période actuelle contre les {stats.periodLabel} précédents</p>
+                            <div className="flex items-end justify-between gap-3">
+                                <div>
+                                    <p className="text-xs text-base-content/50">Actuelle</p>
+                                    <p className="text-xl font-bold">{formatAmount(stats.comparison.currentTotal)}</p>
+                                    <p className="text-xs text-base-content/50 mt-2">Précédente</p>
+                                    <p className="text-lg font-semibold">{formatAmount(stats.comparison.previousTotal)}</p>
+                                </div>
+                                {stats.comparison.deltaPercent === null ? (
+                                    <span className="badge">Sans référence</span>
+                                ) : (
+                                    <span className={`badge ${stats.comparison.deltaPercent > 0 ? "badge-error" : stats.comparison.deltaPercent < 0 ? "badge-success" : "badge-ghost"}`}>
+                                        {stats.comparison.deltaPercent > 0 ? "+" : ""}{stats.comparison.deltaPercent}%
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="card bg-base-100 border border-base-300 p-5">
+                            <h2 className="font-bold text-lg">Dépenses inhabituelles</h2>
+                            <p className="text-sm text-base-content/50 mb-4">Montant {">"} 2× la moyenne de sa catégorie (règle fixe, min. 3 transactions)</p>
+                            {stats.unusual.length === 0 ? (
+                                <p className="text-sm text-base-content/50">Rien à signaler sur cette période.</p>
+                            ) : (
+                                <ul className="divide-y divide-base-300">
+                                    {stats.unusual.map((u) => (
+                                        <li key={u.id} className="flex justify-between items-center py-2 gap-3">
+                                            <div className="min-w-0">
+                                                <p className="font-medium truncate">{u.description}</p>
+                                                <p className="text-xs text-base-content/50">{u.ratio}× la moyenne « {u.category} » ({formatAmount(u.categoryAverage)})</p>
+                                            </div>
+                                            <span className="font-semibold text-sm shrink-0">{formatAmount(u.amount)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             )}
                         </div>
 

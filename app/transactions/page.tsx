@@ -3,8 +3,10 @@ import { TRANSACTION_CATEGORIES, Transaction } from '@/type'
 import { useUser } from '@clerk/nextjs'
 import React, { useEffect, useState } from 'react'
 import { getBudgetOptions, getTransactionsByEmailAndPeriod, TransactionFilters } from '../action'
+import { csvFilename, downloadCsv, transactionsToCsv } from '@/lib/csv'
 import Wrapper from '@/components/Wrapper'
 import TransactionItem from '@/components/TransactionItem'
+import { Download } from 'lucide-react'
 
 const Page = () => {
 
@@ -77,6 +79,10 @@ const Page = () => {
         setMaxAmount("")
     }
 
+    const handleExportCsv = () => {
+        downloadCsv(csvFilename(), transactionsToCsv(transactions))
+    }
+
     return (
         <Wrapper>
 
@@ -147,6 +153,9 @@ const Page = () => {
                         Réinitialiser
                     </button>
                 )}
+                <button className='btn btn-outline' onClick={handleExportCsv}>
+                    <Download className="h-4 w-4" /> Exporter CSV
+                </button>
             </div>
 
             <div className='overflow-x-auto w-full gb-base-200/35 p-5 rounded-xl'>
