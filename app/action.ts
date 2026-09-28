@@ -1,7 +1,8 @@
 'use server'
 
 import prisma from "@/lib/prisma"
-import { normalizeRecurringFrequency, normalizeRecurringType, normalizeTransactionCategory } from "@/type"
+import { normalizeTransactionCategory } from "@/type"
+import { budgetInputSchema, budgetUpdateSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema } from "@/lib/validators"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -62,15 +63,13 @@ export async function checkAndAddUser(email: string | undefined) {
 export async function addBudget(email: string, name: string, amount: number, selectedEmoji: string, category?: string) {
     try {
         const existingUser = await getUserOrThrow(email)
-        const trimmedName = name.trim()
-        if (!trimmedName) throw new Error("Nom du budget requis")
-        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+        const input = parseOrThrow(budgetInputSchema, { name, amount, emoji: selectedEmoji, category })
         await prisma.budget.create({
             data: {
-                name: trimmedName,
-                amount: amount,
-                category: normalizeTransactionCategory(category),
-                emoji: selectedEmoji,
+                name: input.name,
+                amount: input.amount,
+                category: input.category,
+                emoji: input.emoji,
                 userId: existingUser.id
             }
         })
@@ -83,18 +82,16 @@ export async function addBudget(email: string, name: string, amount: number, sel
 export async function updateBudget(email: string, budgetId: string, name: string, amount: number, selectedEmoji: string, category?: string) {
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
-        const trimmedName = name.trim()
-        if (!trimmedName) throw new Error("Nom du budget requis")
-        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+        const input = parseOrThrow(budgetUpdateSchema, { budgetId, name, amount, emoji: selectedEmoji, category })
         const totalSpent = budget.transactions.reduce((acc, t) => acc + t.amount, 0)
-        if (amount < totalSpent) throw new Error("Le nouveau montant est inférieur aux dépenses déjà enregistrées")
+        if (input.amount < totalSpent) throw new Error("Le nouveau montant est inférieur aux dépenses déjà enregistrées")
         await prisma.budget.update({
             where: { id: budgetId },
             data: {
-                name: trimmedName,
-                amount: amount,
-                category: normalizeTransactionCategory(category ?? budget.category),
-                emoji: selectedEmoji
+                name: input.name,
+                amount: input.amount,
+                category: category === undefined ? budget.category : input.category,
+                emoji: input.emoji
             }
         })
     } catch (error) {
@@ -140,15 +137,13 @@ export async function addTransactionToBudget(
 ) {
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
-        const trimmedDescription = description.trim()
-        if (!trimmedDescription) throw new Error("Description requise")
-        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+        const input = parseOrThrow(transactionInputSchema, { description, amount, category })
 
         const totalTransactions = budget.transactions.reduce((acc, t) => {
             return acc + t.amount
         }, 0)
 
-        const totalWithNewTransaction = totalTransactions + amount;
+        const totalWithNewTransaction = totalTransactions + input.amount;
         if (totalWithNewTransaction > budget.amount) {
             throw new Error("Le budget est depassé")
         }
@@ -156,9 +151,9 @@ export async function addTransactionToBudget(
 
         await prisma.transaction.create({
             data: {
-                amount: amount,
-                description: trimmedDescription,
-                category: normalizeTransactionCategory(category),
+                amount: input.amount,
+                description: input.description,
+                category: input.category,
                 emoji: budget.emoji,
                 budget: {
                     connect: {
@@ -182,23 +177,21 @@ export async function updateTransaction(
 ) {
     try {
         const { budget, transaction } = await assertTransactionOwner(transactionId, email)
-        const trimmedDescription = description.trim()
-        if (!trimmedDescription) throw new Error("Description requise")
-        if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
+        const input = parseOrThrow(transactionUpdateSchema, { transactionId, description, amount, category })
 
         const totalWithoutCurrent = budget.transactions.reduce((acc, t) => {
             return t.id === transactionId ? acc : acc + t.amount
         }, 0)
-        if (totalWithoutCurrent + amount > budget.amount) {
+        if (totalWithoutCurrent + input.amount > budget.amount) {
             throw new Error("Le budget est depassé")
         }
 
         await prisma.transaction.update({
             where: { id: transactionId },
             data: {
-                description: trimmedDescription,
-                amount: amount,
-                category: normalizeTransactionCategory(category ?? transaction.category)
+                description: input.description,
+                amount: input.amount,
+                category: category === undefined ? transaction.category : input.category
             }
         })
         void transaction
@@ -251,28 +244,17 @@ async function assertSavingsGoalOwner(goalId: string, email: string) {
     return { user, goal }
 }
 
-function parseGoalInput(name: string, targetAmount: number, savedAmount: number, targetDate: string) {
-    const trimmedName = name.trim()
-    if (!trimmedName) throw new Error("Nom de l'objectif requis")
-    if (isNaN(targetAmount) || targetAmount <= 0) throw new Error("Montant cible invalide")
-    if (isNaN(savedAmount) || savedAmount < 0) throw new Error("Montant épargné invalide")
-    if (savedAmount > targetAmount) throw new Error("Le montant épargné dépasse la cible")
-    const parsedDate = new Date(targetDate)
-    if (isNaN(parsedDate.getTime())) throw new Error("Date cible invalide")
-    return { trimmedName, parsedDate }
-}
-
 export async function addSavingsGoal(email: string, name: string, targetAmount: number, savedAmount: number, targetDate: string, selectedEmoji: string) {
     try {
         const user = await getUserOrThrow(email)
-        const { trimmedName, parsedDate } = parseGoalInput(name, targetAmount, savedAmount, targetDate)
+        const input = parseOrThrow(savingsGoalInputSchema, { name, targetAmount, savedAmount, targetDate, emoji: selectedEmoji })
         await prisma.savingsGoal.create({
             data: {
-                name: trimmedName,
-                targetAmount: targetAmount,
-                savedAmount: savedAmount,
-                targetDate: parsedDate,
-                emoji: selectedEmoji,
+                name: input.name,
+                targetAmount: input.targetAmount,
+                savedAmount: input.savedAmount,
+                targetDate: new Date(input.targetDate),
+                emoji: input.emoji,
                 userId: user.id
             }
         })
@@ -298,15 +280,15 @@ export async function getSavingsGoalsByUser(email: string) {
 export async function updateSavingsGoal(email: string, goalId: string, name: string, targetAmount: number, savedAmount: number, targetDate: string, selectedEmoji: string) {
     try {
         await assertSavingsGoalOwner(goalId, email)
-        const { trimmedName, parsedDate } = parseGoalInput(name, targetAmount, savedAmount, targetDate)
+        const input = parseOrThrow(savingsGoalUpdateSchema, { goalId, name, targetAmount, savedAmount, targetDate, emoji: selectedEmoji })
         await prisma.savingsGoal.update({
             where: { id: goalId },
             data: {
-                name: trimmedName,
-                targetAmount: targetAmount,
-                savedAmount: savedAmount,
-                targetDate: parsedDate,
-                emoji: selectedEmoji
+                name: input.name,
+                targetAmount: input.targetAmount,
+                savedAmount: input.savedAmount,
+                targetDate: new Date(input.targetDate),
+                emoji: input.emoji
             }
         })
     } catch (error) {
@@ -337,21 +319,6 @@ async function assertRecurringOwner(recurringId: string, email: string) {
     return { user, recurring }
 }
 
-function parseRecurringInput(description: string, amount: number, type: string, category: string, frequency: string, startDate: string, endDate?: string | null) {
-    const trimmedDescription = description.trim()
-    if (!trimmedDescription) throw new Error("Description requise")
-    if (isNaN(amount) || amount <= 0) throw new Error("Montant invalide")
-    const parsedStart = new Date(startDate)
-    if (isNaN(parsedStart.getTime())) throw new Error("Date de début invalide")
-    let parsedEnd: Date | null = null
-    if (endDate) {
-        parsedEnd = new Date(endDate)
-        if (isNaN(parsedEnd.getTime())) throw new Error("Date de fin invalide")
-        if (parsedEnd.getTime() < parsedStart.getTime()) throw new Error("La date de fin doit suivre la date de début")
-    }
-    return { trimmedDescription, parsedStart, parsedEnd }
-}
-
 async function resolveRecurringBudget(email: string, budgetId?: string | null) {
     if (!budgetId || budgetId === "none") return null
     const { budget } = await assertBudgetOwner(budgetId, email)
@@ -361,17 +328,17 @@ async function resolveRecurringBudget(email: string, budgetId?: string | null) {
 export async function addRecurringTransaction(email: string, description: string, amount: number, type: string, category: string, frequency: string, startDate: string, endDate: string | null, budgetId: string | null) {
     try {
         const user = await getUserOrThrow(email)
-        const { trimmedDescription, parsedStart, parsedEnd } = parseRecurringInput(description, amount, type, category, frequency, startDate, endDate)
+        const input = parseOrThrow(recurringInputSchema, { description, amount, type, category, frequency, startDate, endDate })
         const resolvedBudgetId = await resolveRecurringBudget(email, budgetId)
         await prisma.recurringTransaction.create({
             data: {
-                description: trimmedDescription,
-                amount: amount,
-                type: normalizeRecurringType(type),
-                category: normalizeTransactionCategory(category),
-                frequency: normalizeRecurringFrequency(frequency),
-                startDate: parsedStart,
-                endDate: parsedEnd,
+                description: input.description,
+                amount: input.amount,
+                type: input.type,
+                category: input.category,
+                frequency: input.frequency,
+                startDate: new Date(input.startDate),
+                endDate: input.endDate ? new Date(input.endDate) : null,
                 budgetId: resolvedBudgetId,
                 userId: user.id
             }
@@ -403,18 +370,18 @@ export async function getRecurringTransactionsByUser(email: string) {
 export async function updateRecurringTransaction(email: string, recurringId: string, description: string, amount: number, type: string, category: string, frequency: string, startDate: string, endDate: string | null, budgetId: string | null) {
     try {
         await assertRecurringOwner(recurringId, email)
-        const { trimmedDescription, parsedStart, parsedEnd } = parseRecurringInput(description, amount, type, category, frequency, startDate, endDate)
+        const input = parseOrThrow(recurringUpdateSchema, { recurringId, description, amount, type, category, frequency, startDate, endDate })
         const resolvedBudgetId = await resolveRecurringBudget(email, budgetId)
         await prisma.recurringTransaction.update({
             where: { id: recurringId },
             data: {
-                description: trimmedDescription,
-                amount: amount,
-                type: normalizeRecurringType(type),
-                category: normalizeTransactionCategory(category),
-                frequency: normalizeRecurringFrequency(frequency),
-                startDate: parsedStart,
-                endDate: parsedEnd,
+                description: input.description,
+                amount: input.amount,
+                type: input.type,
+                category: input.category,
+                frequency: input.frequency,
+                startDate: new Date(input.startDate),
+                endDate: input.endDate ? new Date(input.endDate) : null,
                 budgetId: resolvedBudgetId
             }
         })

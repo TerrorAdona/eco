@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 
 type AuthShellProps = {
   eyebrow: string;
@@ -146,7 +145,7 @@ function SpendingCard() {
         <span>Sem 1</span>
         <span>Sem 2</span>
         <span>Sem 3</span>
-        <span>Aujourd'hui</span>
+        <span>Aujourd&apos;hui</span>
       </div>
     </div>
   );
@@ -160,26 +159,6 @@ export default function AuthShell({
 }: AuthShellProps) {
   return (
     <section className="grid min-h-screen lg:grid-cols-2">
-
-      {/* <Link
-            href="/"
-            className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
-          >
-            <svg
-              className="size-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M19 12H5" />
-              <path d="M12 19l-7-7 7-7" />
-            </svg>
-            Retour à l'accueil
-          </Link> */}
       <aside className="relative isolate hidden overflow-hidden bg-[linear-gradient(160deg,#0d1b2e_0%,#10304c_45%,#0f3b3f_100%)] lg:flex lg:flex-col lg:justify-between">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute -top-28 -left-20 size-96 rounded-full bg-sky-500/20 blur-3xl" />
@@ -226,26 +205,6 @@ export default function AuthShell({
           <div className="mb-10 lg:hidden">
             <Logo />
           </div>
-
-          {/* <Link
-            href="/"
-            className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
-          >
-            <svg
-              className="size-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M19 12H5" />
-              <path d="M12 19l-7-7 7-7" />
-            </svg>
-            Retour à l'accueil
-          </Link> */}
 
           <span className="text-xs font-semibold uppercase tracking-widest text-primary">
             {eyebrow}
