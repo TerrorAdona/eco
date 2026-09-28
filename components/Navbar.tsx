@@ -42,7 +42,7 @@ const Navbar = () => {
                                     <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-black/20">
                                         <LeafIcon />
                                     </span>
-                                    <span className="text-xl font-bold tracking-tight text-gray-900">
+                                    <span className="text-xl font-bold tracking-tight text-base-content">
                                         <Link href={"/"}>eco</Link>
                                     </span>
                                 </div>
@@ -78,7 +78,7 @@ const Navbar = () => {
                                 <span className="grid size-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-black/20">
                                     <LeafIcon />
                                 </span>
-                                <span className="text-xl font-bold tracking-tight text-gray-900">
+                                <span className="text-xl font-bold tracking-tight text-base-content">
                                     eco
                                 </span>
                             </div>

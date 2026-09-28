@@ -21,8 +21,6 @@ const positiveAmount = (message: string) =>
 const nonNegativeAmount = (message: string) =>
     z.custom<number>((v) => typeof v === "number" && !Number.isNaN(v) && v >= 0, message);
 
-const emojiField = z.string().max(12, "Emoji trop long").optional().default("");
-
 const lenientCategory = z.string().optional().transform((v) => normalizeTransactionCategory(v));
 
 const requiredDate = (requiredMessage: string, invalidMessage: string) =>
@@ -31,7 +29,6 @@ const requiredDate = (requiredMessage: string, invalidMessage: string) =>
 export const budgetInputSchema = z.object({
     name: requiredName("Nom du budget", 60),
     amount: positiveAmount("Montant invalide"),
-    emoji: emojiField,
     category: lenientCategory,
 });
 
@@ -54,7 +51,6 @@ export const savingsGoalBaseSchema = z.object({
     targetAmount: positiveAmount("Montant cible invalide"),
     savedAmount: nonNegativeAmount("Montant épargné invalide"),
     targetDate: requiredDate("Date cible requise", "Date cible invalide"),
-    emoji: emojiField,
 });
 
 export const savingsGoalInputSchema = savingsGoalBaseSchema.refine(

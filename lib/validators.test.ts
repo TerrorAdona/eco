@@ -9,17 +9,17 @@ import {
 
 describe("budgetInputSchema", () => {
     it("accepte un budget valide", () => {
-        expect(parseOrThrow(budgetInputSchema, { name: "Courses", amount: 50000, emoji: "", category: "Alimentation" }).name).toBe("Courses");
+        expect(parseOrThrow(budgetInputSchema, { name: "Courses", amount: 50000, category: "Alimentation" }).name).toBe("Courses");
     });
 
     it("rejette nom vide, montant négatif et NaN", () => {
-        expect(() => parseOrThrow(budgetInputSchema, { name: "   ", amount: 100, emoji: "" })).toThrow("Nom du budget requis");
-        expect(() => parseOrThrow(budgetInputSchema, { name: "X", amount: -5, emoji: "" })).toThrow("Montant invalide");
-        expect(() => parseOrThrow(budgetInputSchema, { name: "X", amount: NaN, emoji: "" })).toThrow("Montant invalide");
+        expect(() => parseOrThrow(budgetInputSchema, { name: "   ", amount: 100 })).toThrow("Nom du budget requis");
+        expect(() => parseOrThrow(budgetInputSchema, { name: "X", amount: -5 })).toThrow("Montant invalide");
+        expect(() => parseOrThrow(budgetInputSchema, { name: "X", amount: NaN })).toThrow("Montant invalide");
     });
 
     it("rejette les noms trop longs", () => {
-        expect(() => parseOrThrow(budgetInputSchema, { name: "N".repeat(61), amount: 100, emoji: "" })).toThrow(
+        expect(() => parseOrThrow(budgetInputSchema, { name: "N".repeat(61), amount: 100 })).toThrow(
             "Nom du budget trop long (60 caractères maximum)"
         );
     });
@@ -37,13 +37,13 @@ describe("transactionInputSchema", () => {
 
 describe("savingsGoalInputSchema", () => {
     it("rejette épargné négatif, supérieur à la cible et dates incohérentes", () => {
-        expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: -1, targetDate: "2027-01-01", emoji: "" })).toThrow(
+        expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: -1, targetDate: "2027-01-01" })).toThrow(
             "Montant épargné invalide"
         );
-        expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: 200, targetDate: "2027-01-01", emoji: "" })).toThrow(
+        expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: 200, targetDate: "2027-01-01" })).toThrow(
             "Le montant épargné dépasse la cible"
         );
-        expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: 0, targetDate: "nope", emoji: "" })).toThrow(
+        expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: 0, targetDate: "nope" })).toThrow(
             "Date cible invalide"
         );
     });

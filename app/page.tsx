@@ -10,10 +10,13 @@ export default function Home() {
       <div className="flex items-center justify-center flex-col py-10 w-full">
         <div>
           <div className="flex flex-col">
+            <div className="flex justify-center mb-4">
+              <span className="badge badge-primary badge-lg">Gestion financière personnelle</span>
+            </div>
             <h1 className="text-4xl md:text-5xl font-bold text-center">
-              Gérez éfficacement <br /> vos dépenses.
+              Gérez efficacement <br /> vos dépenses.
             </h1>
-            <p className="py-6 text-gray-800 text-center">
+            <p className="py-6 text-base-content/70 text-center">
               eco vous accompagne pour une meilleure gestion de vos finances.
             </p>
             <div className="flex justify-center items-center">
@@ -25,11 +28,10 @@ export default function Home() {
               </Link>
             </div>
 
-            <ul className='grid md:grid-cols-3 gap-5 mt-5'>
+            <h2 className="text-xl font-semibold text-center mt-10 mb-2">Exemple de budgets</h2>
+            <ul className='grid md:grid-cols-3 gap-5 mt-3'>
               {budgets.map((budget) => (
-                <Link href="#" key={budget.id}>
-                  <BudgetItem budget={budget} enableHover={1} />
-                </Link>
+                <BudgetItem key={budget.id} budget={budget} enableHover={1} />
               ))}
             </ul>
           </div>

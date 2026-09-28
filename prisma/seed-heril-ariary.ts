@@ -55,7 +55,6 @@ async function main() {
     'Abonnement salle de sport', 'Pharmacie', 'Achat de livre', 'Nuit d\'hôtel',
     'Course en taxi', 'Frais de parking', 'Abonnement streaming', 'Abonnement logiciel'
   ]
-  const emojis = ['🛒', '🏠', '💡', '🎬', '🚗', '🍽️', '🛍️', '🏥', '📚', '✈️', '🎁', '💰', '📄', '🌐', '📱', '☕', '🎬', '🎫', '💪', '💊', '📖', '🏨', '🚖', '🅿️', '▶️', '💾']
 
   // Créer entre 5 et 8 budgets pour cet utilisateur
   const budgetCount = 5 + Math.floor(Math.random() * 4) // 5-8
@@ -67,13 +66,11 @@ async function main() {
     const budgetName = budgetNames[Math.floor(Math.random() * budgetNames.length)]
     // Montants en ariary (entiers) : entre 50 000 et 2 000 000 ariary
     const amount = Math.floor(Math.random() * (2000000 - 50000) + 50000)
-    const emoji = emojis[Math.floor(Math.random() * emojis.length)]
 
     const budget = await prisma.budget.create({
       data: {
         name: budgetName,
         amount, // Maintenant un entier (ariary)
-        emoji,
         userId: user.id,
       },
     })
@@ -96,13 +93,11 @@ async function main() {
       if (!isIncome) {
         amount = -amount // négatif pour les dépenses
       }
-      const emoji = emojis[Math.floor(Math.random() * emojis.length)]
 
       await prisma.transaction.create({
         data: {
           description,
           amount, // Maintenant un entier (ariary)
-          emoji,
           budgetId: budget.id,
         },
       })

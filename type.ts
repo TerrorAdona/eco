@@ -5,7 +5,6 @@ export interface Budget {
     name: string;
     amount: number;
     category: string;
-    emoji: string | null;
     transactions?: Transaction[];
 }
 
@@ -35,7 +34,6 @@ export function normalizeTransactionCategory(value: string | null | undefined): 
 export interface Transaction {
     id: string;
     amount: number;
-    emoji: string | null;
     description: string
     category: string;
     createdAt: Date;
@@ -49,7 +47,6 @@ export interface SavingsGoal {
     targetAmount: number;
     savedAmount: number;
     targetDate: Date;
-    emoji: string | null;
     createdAt: Date;
 }
 

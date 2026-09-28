@@ -21,7 +21,6 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [showEditBudget, setShowEditBudget] = useState<boolean>(false)
     const [editName, setEditName] = useState<string>('')
     const [editAmount, setEditAmount] = useState<string>('')
-    const [editEmoji, setEditEmoji] = useState<string>('')
     const [editCategory, setEditCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
     const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
     const closeNotification = () => {
@@ -151,7 +150,6 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         if (!budget) return
         setEditName(budget.name)
         setEditAmount(String(budget.amount))
-        setEditEmoji(budget.emoji ?? "")
         setEditCategory(normalizeTransactionCategory(budget.category))
         setShowEditBudget(true)
     }
@@ -172,7 +170,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 setNotification("Veuillez entrer un montant valide")
                 return
             }
-            await updateBudget(email, budgetId, editName, amountNumber, editEmoji, editCategory)
+            await updateBudget(email, budgetId, editName, amountNumber, editCategory)
             setNotification("Budget modifié avec succès")
             setShowEditBudget(false)
             fetchBudgetData(budgetId, email)
@@ -233,13 +231,6 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                             value={editAmount}
                                             onChange={(e) => setEditAmount(e.target.value)}
                                             placeholder="Montant du budget"
-                                            className="input input-bordered w-full"
-                                        />
-                                        <input
-                                            type="text"
-                                            value={editEmoji}
-                                            onChange={(e) => setEditEmoji(e.target.value)}
-                                            placeholder="Emoji (optionnel)"
                                             className="input input-bordered w-full"
                                         />
                                         <select

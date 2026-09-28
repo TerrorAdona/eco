@@ -55,7 +55,6 @@ async function main() {
     'Abonnement salle de sport', 'Pharmacie', 'Achat de livre', 'Nuit d\'hôtel',
     'Course en taxi', 'Frais de parking', 'Abonnement streaming', 'Abonnement logiciel'
   ]
-  const emojis = ['🛒', '🏠', '💡', '🎬', '🚗', '🍽️', '🛍️', '🏥', '📚', '✈️', '🎁', '💰', '📄', '🌐', '📱', '☕', '🎬', '🎫', '💪', '💊', '📖', '🏨', '🚖', '🅿️', '▶️', '💾']
 
   // Helper to generate round numbers (multiples of 5000)
   function roundAmount(min: number, max: number): number {
@@ -74,13 +73,11 @@ async function main() {
     const budgetName = budgetNames[Math.floor(Math.random() * budgetNames.length)]
     // Montants en ariary arrondis : entre 100 000 et 1 500 000 ariary (arrondi à 5000)
     const amount = roundAmount(100000, 1500000)
-    const emoji = emojis[Math.floor(Math.random() * emojis.length)]
 
     const budget = await prisma.budget.create({
       data: {
         name: budgetName,
         amount, // montant arrondi
-        emoji,
         userId: user.id,
       },
     })
@@ -104,13 +101,11 @@ async function main() {
       if (!isIncome) {
         amount = -amount // négatif pour les dépenses
       }
-      const emoji = emojis[Math.floor(Math.random() * emojis.length)]
 
       await prisma.transaction.create({
         data: {
           description,
           amount, // montant arrondi
-          emoji,
           budgetId: budget.id,
         },
       })

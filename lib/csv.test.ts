@@ -4,7 +4,6 @@ import { Transaction } from "@/type";
 
 const tx = (over: Partial<Transaction> & { id: string }): Transaction => ({
     amount: 0,
-    emoji: null,
     description: "",
     category: "Autres",
     createdAt: new Date("2026-09-10T10:30:00"),

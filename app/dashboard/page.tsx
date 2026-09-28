@@ -2,6 +2,7 @@
 import Wrapper from '@/components/Wrapper'
 import Notification from '@/components/Notification'
 import BudgetItem from '@/components/BudgetItem'
+import CategoryIcon from '@/components/CategoryIcon'
 import SavingsGoalItem from '@/components/SavingsGoalItem'
 import TransactionItem from '@/components/TransactionItem'
 import { getDashboardData, getSavingsGoalsByUser } from '../action'
@@ -221,7 +222,9 @@ const Page = () => {
                                 {stats.alerts.map(({ budget, alert }) => (
                                     <li key={budget.id} className="flex items-center justify-between gap-3 py-2">
                                         <Link href={`/manage/${budget.id}`} className="flex items-center gap-3 min-w-0">
-                                            <span className="text-2xl shrink-0">{budget.emoji}</span>
+                                            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                                                <CategoryIcon category={budget.category} className="w-4 h-4" />
+                                            </span>
                                             <span className="min-w-0">
                                                 <span className="font-medium block truncate">{budget.name}</span>
                                                 <span className="text-xs text-base-content/50">
@@ -332,7 +335,7 @@ const Page = () => {
                             )}
                         </div>
 
-                        <div className="card bg-base-100 border border-base-300 p-5">
+                        <div className="card bg-base-100 border border-base-300 p-5 lg:col-span-2">
                             <h2 className="font-bold text-lg mb-1">Dépenses récentes</h2>
                             <p className="text-sm text-base-content/50 mb-2">5 dernières transactions</p>
                             {stats.recent.length === 0 ? (
@@ -376,9 +379,9 @@ const Page = () => {
                         </div>
 
                         <div className="card bg-base-100 border border-base-300 p-5">
-                            <h2 className="font-bold text-lg mb-1">Détail par budget</h2>
-                            <p className="text-sm text-base-content/50 mb-4">Prévu, dépensé, restant et pourcentage consommé</p>
-                            <ul className="grid md:grid-cols-2 gap-5">
+                        <h2 className="font-bold text-lg mb-1">Détail par budget</h2>
+                        <p className="text-sm text-base-content/50 mb-4">Prévu, dépensé, restant et pourcentage consommé</p>
+                        <ul className="grid grid-cols-1 gap-5">
                                 {budgets.map((budget) => (
                                     <Link href={`/manage/${budget.id}`} key={budget.id}>
                                         <BudgetItem budget={{ ...budget, createdAt: new Date(budget.createdAt) }} enableHover={1} />

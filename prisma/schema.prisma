@@ -44,7 +44,6 @@ model SavingsGoal {
   targetAmount Float
   savedAmount  Float    @default(0)
   targetDate   DateTime
-  emoji        String?
   userId       String
   user         User     @relation(fields: [userId], references: [id])
   createdAt    DateTime @default(now())
@@ -57,7 +56,6 @@ model Budget {
   category     String       @default("Autres")
   userId       String
   user         User         @relation(fields: [userId], references: [id])
-  emoji        String?
   transactions Transaction[]
   recurringTransactions RecurringTransaction[]
   createdAt    DateTime     @default(now())
@@ -70,6 +68,5 @@ model Transaction {
   category     String     @default("Autres")
   budgetId     String?
   budget       Budget?    @relation(fields: [budgetId], references: [id])
-  emoji        String?
   createdAt    DateTime   @default(now())
 }

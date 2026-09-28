@@ -1,4 +1,5 @@
 import { SavingsGoal } from "@/type"
+import { Target } from "lucide-react"
 import React from "react"
 
 interface SavingsGoalItemProps {
@@ -24,14 +25,14 @@ const SavingsGoalItem: React.FC<SavingsGoalItemProps> = ({ goal, enableHover }) 
             key={goal.id}
             className={`card border-2 border-base-300 bg-base-100 list-none p-2 ${hoverClasse}`}
         >
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="text-4xl">
-                        {goal.emoji || "🎯"}
-                    </div>
-                    <div className="flex flex-col ml-3">
-                        <h2 className="font-bold text-xl">{goal.name}</h2>
-                        <span className="flex items-center gap-2">
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+                        <Target className="w-6 h-6" aria-hidden="true" />
+                    </span>
+                    <div className="flex flex-col min-w-0">
+                        <h2 className="font-bold text-xl truncate">{goal.name}</h2>
+                        <span className="flex flex-wrap items-center gap-2">
                             <span className="badge badge-outline badge-sm">
                                 {targetDate.toLocaleDateString("fr-FR")}
                             </span>
@@ -43,14 +44,20 @@ const SavingsGoalItem: React.FC<SavingsGoalItemProps> = ({ goal, enableHover }) 
                         </span>
                     </div>
                 </div>
-                <div className="text-xl font-bold text-accent">
+                <div className="shrink-0 text-right text-lg font-bold text-accent leading-tight">
                     {goal.targetAmount.toLocaleString("fr-FR")} Ar
                 </div>
             </div>
 
-            <div className="mt-5 flex justify-between">
-                <span className="text-sm text-gray-500 text-sm"> <span className="text-secondary font-bold">{goal.savedAmount.toLocaleString("fr-FR")}</span> Ar épargnés</span>
-                <span className="text-sm text-gray-500 text-sm"><span className="text-red-500 font-bold">{remainingAmount.toLocaleString("fr-FR")}</span> Ar restants</span>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+                <div className="min-w-0">
+                    <p className="text-secondary font-bold truncate">{goal.savedAmount.toLocaleString("fr-FR")} Ar</p>
+                    <p className="text-xs text-base-content/60">épargnés</p>
+                </div>
+                <div className="min-w-0 text-right">
+                    <p className="text-error font-bold truncate">{remainingAmount.toLocaleString("fr-FR")} Ar</p>
+                    <p className="text-xs text-base-content/60">restants</p>
+                </div>
             </div>
 
             <div className="w-full bg-base-300 rounded-full h-2.5 mt-3">
@@ -62,7 +69,7 @@ const SavingsGoalItem: React.FC<SavingsGoalItemProps> = ({ goal, enableHover }) 
                     aria-valuemax={100}
                 ></div>
             </div>
-            <div className="mt-1 flex justify-between text-xs text-gray-500">
+            <div className="mt-1 flex justify-between text-xs text-base-content/60">
                 <span>{cappedPercentage}% épargné</span>
                 <span>{100 - cappedPercentage}% restant</span>
             </div>

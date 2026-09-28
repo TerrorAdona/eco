@@ -60,16 +60,15 @@ export async function checkAndAddUser(email: string | undefined) {
     }
 }
 
-export async function addBudget(email: string, name: string, amount: number, selectedEmoji: string, category?: string) {
+export async function addBudget(email: string, name: string, amount: number, category?: string) {
     try {
         const existingUser = await getUserOrThrow(email)
-        const input = parseOrThrow(budgetInputSchema, { name, amount, emoji: selectedEmoji, category })
+        const input = parseOrThrow(budgetInputSchema, { name, amount, category })
         await prisma.budget.create({
             data: {
                 name: input.name,
                 amount: input.amount,
                 category: input.category,
-                emoji: input.emoji,
                 userId: existingUser.id
             }
         })
@@ -79,10 +78,10 @@ export async function addBudget(email: string, name: string, amount: number, sel
     }
 }
 
-export async function updateBudget(email: string, budgetId: string, name: string, amount: number, selectedEmoji: string, category?: string) {
+export async function updateBudget(email: string, budgetId: string, name: string, amount: number, category?: string) {
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
-        const input = parseOrThrow(budgetUpdateSchema, { budgetId, name, amount, emoji: selectedEmoji, category })
+        const input = parseOrThrow(budgetUpdateSchema, { budgetId, name, amount, category })
         const totalSpent = budget.transactions.reduce((acc, t) => acc + t.amount, 0)
         if (input.amount < totalSpent) throw new Error("Le nouveau montant est inférieur aux dépenses déjà enregistrées")
         await prisma.budget.update({
@@ -90,8 +89,7 @@ export async function updateBudget(email: string, budgetId: string, name: string
             data: {
                 name: input.name,
                 amount: input.amount,
-                category: category === undefined ? budget.category : input.category,
-                emoji: input.emoji
+                category: category === undefined ? budget.category : input.category
             }
         })
     } catch (error) {
@@ -154,7 +152,6 @@ export async function addTransactionToBudget(
                 amount: input.amount,
                 description: input.description,
                 category: input.category,
-                emoji: budget.emoji,
                 budget: {
                     connect: {
                         id: budgetId
@@ -244,17 +241,16 @@ async function assertSavingsGoalOwner(goalId: string, email: string) {
     return { user, goal }
 }
 
-export async function addSavingsGoal(email: string, name: string, targetAmount: number, savedAmount: number, targetDate: string, selectedEmoji: string) {
+export async function addSavingsGoal(email: string, name: string, targetAmount: number, savedAmount: number, targetDate: string) {
     try {
         const user = await getUserOrThrow(email)
-        const input = parseOrThrow(savingsGoalInputSchema, { name, targetAmount, savedAmount, targetDate, emoji: selectedEmoji })
+        const input = parseOrThrow(savingsGoalInputSchema, { name, targetAmount, savedAmount, targetDate })
         await prisma.savingsGoal.create({
             data: {
                 name: input.name,
                 targetAmount: input.targetAmount,
                 savedAmount: input.savedAmount,
                 targetDate: new Date(input.targetDate),
-                emoji: input.emoji,
                 userId: user.id
             }
         })
@@ -277,18 +273,17 @@ export async function getSavingsGoalsByUser(email: string) {
     }
 }
 
-export async function updateSavingsGoal(email: string, goalId: string, name: string, targetAmount: number, savedAmount: number, targetDate: string, selectedEmoji: string) {
+export async function updateSavingsGoal(email: string, goalId: string, name: string, targetAmount: number, savedAmount: number, targetDate: string) {
     try {
         await assertSavingsGoalOwner(goalId, email)
-        const input = parseOrThrow(savingsGoalUpdateSchema, { goalId, name, targetAmount, savedAmount, targetDate, emoji: selectedEmoji })
+        const input = parseOrThrow(savingsGoalUpdateSchema, { goalId, name, targetAmount, savedAmount, targetDate })
         await prisma.savingsGoal.update({
             where: { id: goalId },
             data: {
                 name: input.name,
                 targetAmount: input.targetAmount,
                 savedAmount: input.savedAmount,
-                targetDate: new Date(input.targetDate),
-                emoji: input.emoji
+                targetDate: new Date(input.targetDate)
             }
         })
     } catch (error) {

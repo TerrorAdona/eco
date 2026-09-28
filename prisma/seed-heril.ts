@@ -37,7 +37,6 @@ async function main() {
     'Abonnement salle de sport', 'Pharmacie', 'Achat de livre', 'Nuit d\'hôtel',
     'Course en taxi', 'Frais de parking', 'Abonnement streaming', 'Abonnement logiciel'
   ]
-  const emojis = ['🛒', '🏠', '💡', '🎬', '🚗', '🍽️', '🛍️', '🏥', '📚', '✈️', '🎁', '💰', '📄', '🌐', '📱', '☕', '🎬', '🎫', '💪', '💊', '📖', '🏨', '🚖', '🅿️', '▶️', '💾']
 
   // Créer entre 5 et 10 budgets pour cet utilisateur
   const budgetCount = 5 + Math.floor(Math.random() * 6) // 5-10
@@ -48,13 +47,11 @@ async function main() {
   for (let i = 0; i < budgetCount; i++) {
     const budgetName = budgetNames[Math.floor(Math.random() * budgetNames.length)]
     const amount = parseFloat((Math.random() * 2000 + 500).toFixed(2)) // 500-2500
-    const emoji = emojis[Math.floor(Math.random() * emojis.length)]
 
     const budget = await prisma.budget.create({
       data: {
         name: budgetName,
         amount,
-        emoji,
         userId: user.id,
       },
     })
@@ -76,13 +73,11 @@ async function main() {
       if (!isIncome) {
         amount = -amount // négatif pour les dépenses
       }
-      const emoji = emojis[Math.floor(Math.random() * emojis.length)]
 
       await prisma.transaction.create({
         data: {
           description,
           amount,
-          emoji,
           budgetId: budget.id,
         },
       })

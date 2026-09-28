@@ -2,7 +2,6 @@
 
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
-import EmojiPicker from 'emoji-picker-react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert } from '@/lib/budget-alerts'
 import { addBudget, deleteBudget, getBudgetsByUser, updateBudget } from '../action'
@@ -17,8 +16,6 @@ const Page = () => {
     const { user } = useUser()
     const [budgetName, setBudgetName] = useState<string>("")
     const [budgetAmount, setBudgetAmount] = useState<string>("")
-    const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false)
-    const [selectedEmoji, setSelectedEmoji] = useState<string>("")
     const [budgetCategory, setBudgetCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
     const [budgets, setBudgets] = useState<Budget[]>([])
     const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
@@ -30,17 +27,10 @@ const Page = () => {
 
     const getUserEmail = () => user?.primaryEmailAddress?.emailAddress ?? ""
 
-    const handleEmojiSelect = (emojiObject: { emoji: string }) => {
-        setSelectedEmoji(emojiObject.emoji)
-        setShowEmojiPicker(false)
-    }
-
     const resetForm = () => {
         setBudgetName("")
         setBudgetAmount("")
-        setSelectedEmoji("")
         setBudgetCategory(DEFAULT_TRANSACTION_CATEGORY)
-        setShowEmojiPicker(false)
         setEditingBudgetId(null)
     }
 
@@ -58,9 +48,7 @@ const Page = () => {
     const openEditModal = (budget: Budget) => {
         setBudgetName(budget.name)
         setBudgetAmount(String(budget.amount))
-        setSelectedEmoji(budget.emoji ?? "")
         setBudgetCategory(normalizeTransactionCategory(budget.category))
-        setShowEmojiPicker(false)
         setEditingBudgetId(budget.id)
         const modal = document.getElementById("my_modal_3") as HTMLDialogElement | null
         modal?.showModal()
@@ -117,10 +105,10 @@ const Page = () => {
             if (!budgetName.trim()) throw new Error("Nom du budget requis")
 
             if (editingBudgetId) {
-                await updateBudget(email, editingBudgetId, budgetName, amount, selectedEmoji, budgetCategory)
+                await updateBudget(email, editingBudgetId, budgetName, amount, budgetCategory)
                 setNotification("Budget modifié avec succès")
             } else {
-                await addBudget(email, budgetName, amount, selectedEmoji, budgetCategory)
+                await addBudget(email, budgetName, amount, budgetCategory)
                 setNotification("Budget ajouté avec succès")
             }
 
@@ -173,17 +161,6 @@ const Page = () => {
                                     <option key={c} value={c}>{c}</option>
                                 ))}
                             </select>
-
-                            <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className={`btn ${showEmojiPicker ? 'btn-primary' : 'btn-outline'}`}>
-                                {selectedEmoji || "Choisir un emoji"}</button>
-                            {
-                                showEmojiPicker && (
-                                    <div className="flex justify-center items-center pb-5">
-                                        <EmojiPicker onEmojiClick={handleEmojiSelect}  />
-                                    </div>
-                                )
-                            }
-
 
                             <button
                             className='btn btn-primary mt-3'

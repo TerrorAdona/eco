@@ -7,7 +7,7 @@ import { addRecurringTransaction, deleteRecurringTransaction, getBudgetOptions, 
 import { nextOccurrences } from '@/lib/recurrence'
 import Notification from '@/components/Notification'
 import { DEFAULT_TRANSACTION_CATEGORY, normalizeRecurringFrequency, normalizeRecurringType, normalizeTransactionCategory, RECURRING_FREQUENCIES, RECURRING_FREQUENCY_LABELS, RECURRING_TYPE_LABELS, RECURRING_TYPES, RecurringTransaction, TRANSACTION_CATEGORIES } from '@/type'
-import { CalendarClock, Pencil, Trash } from 'lucide-react'
+import { CalendarClock, Pencil, Repeat, Trash } from 'lucide-react'
 
 const toDateInputValue = (value: Date | string) => {
     const date = new Date(value)
@@ -270,7 +270,9 @@ const Page = () => {
                             <li key={item.id} className={`card border-2 border-base-300 bg-base-100 list-none p-4 ${!item.isActive ? "opacity-60" : ""}`}>
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <div className="text-3xl">🔁</div>
+                                        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                                            <Repeat className="w-5 h-5" aria-hidden="true" />
+                                        </span>
                                         <div className="flex flex-col min-w-0">
                                             <span className="font-bold truncate">{item.description}</span>
                                             <span className="flex flex-wrap items-center gap-1 mt-1">

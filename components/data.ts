@@ -7,12 +7,10 @@ const budgets: Budget[] = [
     name: "Sakafo",
     amount: 250000,
     category: "Alimentation",
-    emoji: "🍚",
     transactions: [
       {
         id: "t1",
         amount: 45000,
-        emoji: "🍚",
         description: "Courses au marché d'Anosibe",
         createdAt: new Date("2026-09-03"),
         budgetName: "Sakafo",
@@ -22,7 +20,6 @@ const budgets: Budget[] = [
       {
         id: "t2",
         amount: 12000,
-        emoji: "🥘",
         description: "Vary amin'anana",
         createdAt: new Date("2026-09-05"),
         budgetName: "Sakafo",
@@ -32,7 +29,6 @@ const budgets: Budget[] = [
       {
         id: "t3",
         amount: 8000,
-        emoji: "🥖",
         description: "Mofo sy café",
         createdAt: new Date("2026-09-07"),
         budgetName: "Sakafo",
@@ -42,7 +38,6 @@ const budgets: Budget[] = [
       {
         id: "t4",
         amount: 25000,
-        emoji: "🥩",
         description: "Viande et légumes",
         createdAt: new Date("2026-09-10"),
         budgetName: "Sakafo",
@@ -58,12 +53,10 @@ const budgets: Budget[] = [
     name: "Transport",
     amount: 180000,
     category: "Transport",
-    emoji: "🚌",
     transactions: [
       {
         id: "t5",
         amount: 30000,
-        emoji: "🚌",
         description: "Taxi-be",
         createdAt: new Date("2026-09-02"),
         budgetName: "Transport",
@@ -73,7 +66,6 @@ const budgets: Budget[] = [
       {
         id: "t6",
         amount: 15000,
-        emoji: "🚕",
         description: "Taxi",
         createdAt: new Date("2026-09-06"),
         budgetName: "Transport",
@@ -83,7 +75,6 @@ const budgets: Budget[] = [
       {
         id: "t7",
         amount: 25000,
-        emoji: "⛽",
         description: "Carburant",
         createdAt: new Date("2026-09-09"),
         budgetName: "Transport",
@@ -93,7 +84,6 @@ const budgets: Budget[] = [
       {
         id: "t8",
         amount: 10000,
-        emoji: "🏍️",
         description: "Déplacement en moto",
         createdAt: new Date("2026-09-12"),
         budgetName: "Transport",
@@ -109,12 +99,10 @@ const budgets: Budget[] = [
     name: "Téléphone & Internet",
     amount: 120000,
     category: "Abonnements",
-    emoji: "📱",
     transactions: [
       {
         id: "t9",
         amount: 20000,
-        emoji: "📱",
         description: "Crédit Telma",
         createdAt: new Date("2026-09-03"),
         budgetName: "Téléphone & Internet",
@@ -124,7 +112,6 @@ const budgets: Budget[] = [
       {
         id: "t10",
         amount: 30000,
-        emoji: "🌐",
         description: "Forfait Internet",
         createdAt: new Date("2026-09-05"),
         budgetName: "Téléphone & Internet",
@@ -134,7 +121,6 @@ const budgets: Budget[] = [
       {
         id: "t11",
         amount: 15000,
-        emoji: "📞",
         description: "Crédit Orange",
         createdAt: new Date("2026-09-11"),
         budgetName: "Téléphone & Internet",
@@ -150,12 +136,10 @@ const budgets: Budget[] = [
     name: "Jirama & Maison",
     amount: 200000,
     category: "Logement",
-    emoji: "🏠",
     transactions: [
       {
         id: "t12",
         amount: 65000,
-        emoji: "💡",
         description: "Facture Jirama",
         createdAt: new Date("2026-09-04"),
         budgetName: "Jirama & Maison",
@@ -165,7 +149,6 @@ const budgets: Budget[] = [
       {
         id: "t13",
         amount: 30000,
-        emoji: "💧",
         description: "Eau",
         createdAt: new Date("2026-09-06"),
         budgetName: "Jirama & Maison",
@@ -175,7 +158,6 @@ const budgets: Budget[] = [
       {
         id: "t14",
         amount: 25000,
-        emoji: "🧹",
         description: "Produits ménagers",
         createdAt: new Date("2026-09-09"),
         budgetName: "Jirama & Maison",
@@ -191,12 +173,10 @@ const budgets: Budget[] = [
     name: "Études",
     amount: 150000,
     category: "Études",
-    emoji: "🎓",
     transactions: [
       {
         id: "t15",
         amount: 35000,
-        emoji: "📚",
         description: "Livres et supports de cours",
         createdAt: new Date("2026-09-02"),
         budgetName: "Études",
@@ -206,7 +186,6 @@ const budgets: Budget[] = [
       {
         id: "t16",
         amount: 15000,
-        emoji: "🖨️",
         description: "Impressions",
         createdAt: new Date("2026-09-05"),
         budgetName: "Études",
@@ -216,7 +195,6 @@ const budgets: Budget[] = [
       {
         id: "t17",
         amount: 20000,
-        emoji: "💻",
         description: "Cyber et travaux pratiques",
         createdAt: new Date("2026-09-08"),
         budgetName: "Études",
@@ -232,12 +210,10 @@ const budgets: Budget[] = [
     name: "Mobile Money",
     amount: 100000,
     category: "Autres",
-    emoji: "💸",
     transactions: [
       {
         id: "t18",
         amount: 30000,
-        emoji: "📲",
         description: "Dépôt MVola",
         createdAt: new Date("2026-09-03"),
         budgetName: "Mobile Money",
@@ -247,7 +223,6 @@ const budgets: Budget[] = [
       {
         id: "t19",
         amount: 20000,
-        emoji: "📲",
         description: "Transfert Orange Money",
         createdAt: new Date("2026-09-07"),
         budgetName: "Mobile Money",
@@ -263,12 +238,10 @@ const budgets: Budget[] = [
     name: "Loisirs",
     amount: 100000,
     category: "Loisirs",
-    emoji: "🎉",
     transactions: [
       {
         id: "t20",
         amount: 20000,
-        emoji: "⚽",
         description: "Match de foot avec les amis",
         createdAt: new Date("2026-09-06"),
         budgetName: "Loisirs",
@@ -278,7 +251,6 @@ const budgets: Budget[] = [
       {
         id: "t21",
         amount: 15000,
-        emoji: "🍻",
         description: "Sortie entre amis",
         createdAt: new Date("2026-09-09"),
         budgetName: "Loisirs",
@@ -288,7 +260,6 @@ const budgets: Budget[] = [
       {
         id: "t22",
         amount: 10000,
-        emoji: "🎬",
         description: "Cinéma",
         createdAt: new Date("2026-09-13"),
         budgetName: "Loisirs",
@@ -304,12 +275,10 @@ const budgets: Budget[] = [
     name: "Épargne",
     amount: 300000,
     category: "Autres",
-    emoji: "💰",
     transactions: [
       {
         id: "t23",
         amount: 100000,
-        emoji: "🏦",
         description: "Épargne mensuelle",
         createdAt: new Date("2026-09-01"),
         budgetName: "Épargne",
@@ -319,7 +288,6 @@ const budgets: Budget[] = [
       {
         id: "t24",
         amount: 50000,
-        emoji: "🐷",
         description: "Tahiry / épargne personnelle",
         createdAt: new Date("2026-09-10"),
         budgetName: "Épargne",

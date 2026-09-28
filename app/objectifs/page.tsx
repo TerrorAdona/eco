@@ -2,7 +2,6 @@
 
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
-import EmojiPicker from 'emoji-picker-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { addSavingsGoal, deleteSavingsGoal, getSavingsGoalsByUser, updateSavingsGoal } from '../action'
 import Notification from '@/components/Notification'
@@ -22,8 +21,6 @@ const Page = () => {
     const [targetAmount, setTargetAmount] = useState<string>("")
     const [savedAmount, setSavedAmount] = useState<string>("")
     const [targetDate, setTargetDate] = useState<string>("")
-    const [showEmojiPicker, setShowEmojiPicker] = useState<boolean>(false)
-    const [selectedEmoji, setSelectedEmoji] = useState<string>("")
     const [goals, setGoals] = useState<SavingsGoal[]>([])
     const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
 
@@ -34,18 +31,11 @@ const Page = () => {
 
     const getUserEmail = () => user?.primaryEmailAddress?.emailAddress ?? ""
 
-    const handleEmojiSelect = (emojiObject: { emoji: string }) => {
-        setSelectedEmoji(emojiObject.emoji)
-        setShowEmojiPicker(false)
-    }
-
     const resetForm = () => {
         setGoalName("")
         setTargetAmount("")
         setSavedAmount("")
         setTargetDate("")
-        setSelectedEmoji("")
-        setShowEmojiPicker(false)
         setEditingGoalId(null)
     }
 
@@ -65,8 +55,6 @@ const Page = () => {
         setTargetAmount(String(goal.targetAmount))
         setSavedAmount(String(goal.savedAmount))
         setTargetDate(toDateInputValue(goal.targetDate))
-        setSelectedEmoji(goal.emoji ?? "")
-        setShowEmojiPicker(false)
         setEditingGoalId(goal.id)
         const modal = document.getElementById("goal_modal") as HTMLDialogElement | null
         modal?.showModal()
@@ -104,10 +92,10 @@ const Page = () => {
             if (!targetDate) throw new Error("Date cible requise")
 
             if (editingGoalId) {
-                await updateSavingsGoal(email, editingGoalId, goalName, target, saved, targetDate, selectedEmoji)
+                await updateSavingsGoal(email, editingGoalId, goalName, target, saved, targetDate)
                 setNotification("Objectif modifié avec succès")
             } else {
-                await addSavingsGoal(email, goalName, target, saved, targetDate, selectedEmoji)
+                await addSavingsGoal(email, goalName, target, saved, targetDate)
                 setNotification("Objectif ajouté avec succès")
             }
 
@@ -158,17 +146,6 @@ const Page = () => {
                             <input type="number" value={savedAmount} onChange={(e) => setSavedAmount(e.target.value)} placeholder='Montant déjà épargné' className='w-full input input-bordered mb-3' />
 
                             <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className='w-full input input-bordered mb-3' required />
-
-                            <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className={`btn ${showEmojiPicker ? 'btn-primary' : 'btn-outline'}`}>
-                                {selectedEmoji || "Choisir un emoji"}</button>
-                            {
-                                showEmojiPicker && (
-                                    <div className="flex justify-center items-center pb-5">
-                                        <EmojiPicker onEmojiClick={handleEmojiSelect}  />
-                                    </div>
-                                )
-                            }
-
 
                             <button
                             className='btn btn-primary mt-3'
