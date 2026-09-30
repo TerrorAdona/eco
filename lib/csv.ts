@@ -1,6 +1,7 @@
 import { normalizeTransactionCategory, Transaction } from "@/type";
+import { DEFAULT_CURRENCY } from "./money";
 
-export const CSV_HEADERS = ["date", "description", "montant", "categorie", "budget", "type"] as const;
+export const CSV_HEADERS = ["date", "description", "montant", "devise", "categorie", "budget", "type"] as const;
 
 const CSV_BOM = String.fromCharCode(0xfeff);
 
@@ -25,6 +26,7 @@ export function transactionsToCsv(transactions: Transaction[]): string {
                 formatTransactionDate(t.createdAt),
                 t.description,
                 String(t.amount),
+                t.accountCurrency || t.account?.currency || DEFAULT_CURRENCY,
                 normalizeTransactionCategory(t.category),
                 t.budgetName ?? "",
                 "",

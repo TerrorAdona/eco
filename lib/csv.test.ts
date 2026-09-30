@@ -14,8 +14,8 @@ describe("transactionsToCsv", () => {
     it("génère uniquement les en-têtes sans transaction", () => {
         const csv = transactionsToCsv([]);
         expect(csv.charCodeAt(0)).toBe(0xfeff);
-        expect(csv.slice(1)).toBe("date;description;montant;categorie;budget;type");
-        expect(CSV_HEADERS).toHaveLength(6);
+        expect(csv.slice(1)).toBe("date;description;montant;devise;categorie;budget;type");
+        expect(CSV_HEADERS).toHaveLength(7);
     });
 
     it("exporte une transaction avec ses colonnes", () => {
@@ -27,6 +27,15 @@ describe("transactionsToCsv", () => {
         expect(lines[1]).toContain("12000");
         expect(lines[1]).toContain("Alimentation");
         expect(lines[1]).toContain("Sakafo");
+    });
+
+    it("exporte la devise du compte ou MGA par défaut", () => {
+        const lines = transactionsToCsv([
+            tx({ id: "a", description: "A", amount: 1, accountCurrency: "EUR" }),
+            tx({ id: "b", description: "B", amount: 1 }),
+        ]).split("\r\n");
+        expect(lines[1]).toContain(";EUR;");
+        expect(lines[2]).toContain(";MGA;");
     });
 
     it("échappe points-virgules, guillemets et retours", () => {

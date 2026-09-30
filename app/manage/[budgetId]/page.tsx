@@ -3,6 +3,7 @@ import { addTransactionToBudget, deleteBudget, deleteTransaction, getAccounts, g
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
 import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeRecurringType, normalizeTransactionCategory, RECURRING_TYPE_LABELS, RECURRING_TYPES, TRANSACTION_CATEGORIES, Transaction } from '@/type'
+import { formatMoney } from '@/lib/money'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
@@ -436,7 +437,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                     group-hover:text-primary-content
                                 "
                                                     >
-                                                        {normalizeRecurringType(transaction.type) === "REVENU" ? "+" : "-"}{transaction.amount.toLocaleString("fr-FR")} Ar
+                                                        {normalizeRecurringType(transaction.type) === "REVENU" ? "+" : "-"}{formatMoney(transaction.amount, transaction.account?.currency)}
                                                     </div>
                                                     <div className="flex shrink-0 gap-1">
                                                         <button

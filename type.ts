@@ -42,7 +42,8 @@ export interface Transaction {
     budgetId?: string | null;
     accountName?: string;
     accountId?: string | null;
-    account?: { id: string; name: string } | null;
+    accountCurrency?: string;
+    account?: { id: string; name: string; currency?: string } | null;
 }
 
 export const ACCOUNT_TYPES = [

@@ -17,7 +17,7 @@ async function assertBudgetOwner(budgetId: string, email: string) {
     const user = await getUserOrThrow(email)
     const budget = await prisma.budget.findUnique({
         where: { id: budgetId },
-        include: { transactions: { include: { account: { select: { id: true, name: true } } } } }
+        include: { transactions: { include: { account: { select: { id: true, name: true, currency: true } } } } }
     })
     if (!budget) throw new Error("Budget non trouvé")
     if (budget.userId !== user.id) throw new Error("Accès non autorisé")
@@ -810,7 +810,7 @@ export async function getTransactionsByEmailAndPeriod(email: string, period: str
             },
             include: {
                 budget: { select: { id: true, name: true } },
-                account: { select: { id: true, name: true } }
+                account: { select: { id: true, name: true, currency: true } }
             },
             orderBy: { createdAt: "desc" }
         })
@@ -820,7 +820,8 @@ export async function getTransactionsByEmailAndPeriod(email: string, period: str
             budgetName: transaction.budget?.name ?? "",
             budgetId: transaction.budget?.id ?? transaction.budgetId,
             accountName: transaction.account?.name ?? "",
-            accountId: transaction.account?.id ?? transaction.accountId
+            accountId: transaction.account?.id ?? transaction.accountId,
+            accountCurrency: transaction.account?.currency ?? undefined
         }));
     } catch (error) {
         console.error("Erreur lors de la récupération des transactions : ", error)
