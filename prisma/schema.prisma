@@ -19,6 +19,19 @@ model User {
   budgets       Budget[]
   savingsGoals  SavingsGoal[]
   recurringTransactions RecurringTransaction[]
+  accounts      Account[]
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   @default("COURANT")
+  currency  String   @default("MGA")
+  balance   Float    @default(0)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RecurringTransaction {
