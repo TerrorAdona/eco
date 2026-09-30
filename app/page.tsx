@@ -19,16 +19,16 @@ export default function Home() {
             <p className="py-6 text-base-content/70 text-center">
               eco vous accompagne pour une meilleure gestion de vos finances.
             </p>
-            <div className="flex justify-center items-center">
+            {/* <div className="flex justify-center items-center">
               <Link href={"/sign-in"} className="btn btn-sm md:btn-md btn-outline btn-accent">
                 Se connecter
               </Link>
               <Link href={"/sign-up"} className="btn btn-sm md:btn-md btn-accent ml-2">
                 Créer un compte
               </Link>
-            </div>
+            </div> */}
 
-            <h2 className="text-xl font-semibold text-center mt-10 mb-2">Exemple de budgets</h2>
+            {/* <h2 className="text-xl font-semibold text-center mt-10 mb-2">Exemple de budgets</h2> */}
             <ul className='grid md:grid-cols-3 gap-5 mt-3'>
               {budgets.map((budget) => (
                 <BudgetItem key={budget.id} budget={budget} enableHover={1} />

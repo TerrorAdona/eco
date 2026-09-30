@@ -3,7 +3,7 @@
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
 import React, { useCallback, useEffect, useState } from 'react'
-import { addSavingsGoal, deleteSavingsGoal, getSavingsGoalsByUser, updateSavingsGoal } from '../action'
+import { addSavingsGoal, contributeToGoal, deleteSavingsGoal, getSavingsGoalsByUser, updateSavingsGoal } from '../action'
 import Notification from '@/components/Notification'
 import { SavingsGoal } from '@/type'
 import SavingsGoalItem from '@/components/SavingsGoalItem'
@@ -23,6 +23,8 @@ const Page = () => {
     const [targetDate, setTargetDate] = useState<string>("")
     const [goals, setGoals] = useState<SavingsGoal[]>([])
     const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
+    const [contributeGoal, setContributeGoal] = useState<SavingsGoal | null>(null)
+    const [contributeAmount, setContributeAmount] = useState<string>("")
 
     const [notification, setNotification] = useState<string>("")
     const closeNotification = () => {
@@ -107,6 +109,35 @@ const Page = () => {
         }
     }
 
+    const openContributeModal = (goal: SavingsGoal) => {
+        setContributeGoal(goal)
+        setContributeAmount("")
+        const modal = document.getElementById("verser_modal") as HTMLDialogElement | null
+        modal?.showModal()
+    }
+
+    const closeContributeModal = () => {
+        const modal = document.getElementById("verser_modal") as HTMLDialogElement | null
+        modal?.close()
+        setContributeGoal(null)
+        setContributeAmount("")
+    }
+
+    const handleContribute = async () => {
+        if (!contributeGoal) return
+        try {
+            const email = getUserEmail()
+            if (!email) throw new Error("Utilisateur non trouvé")
+            const amount = parseFloat(contributeAmount)
+            await contributeToGoal(email, contributeGoal.id, amount)
+            setNotification(`Versement de ${amount.toLocaleString("fr-FR")} Ar enregistré`)
+            await fetchGoals()
+            closeContributeModal()
+        } catch (error: unknown) {
+            setNotification(getErrorMessage(error, "Erreur lors du versement"))
+        }
+    }
+
     const handleDeleteGoal = async (goalId: string) => {
         const confirmed = window.confirm("Voulez vous réellement supprimer cet objectif ?")
         if (!confirmed) return
@@ -156,11 +187,31 @@ const Page = () => {
                     </div>
                 </dialog>
 
+                <dialog id="verser_modal" className="modal">
+                    <div className="modal-box">
+                        <form method="dialog">
+                            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onClick={closeContributeModal}>✕</button>
+                        </form>
+                        <h3 className="font-bold text-lg">Verser sur « {contributeGoal?.name} »</h3>
+                        {contributeGoal && (
+                            <p className="py-4">
+                                Déjà épargnés : <span className="font-bold">{contributeGoal.savedAmount.toLocaleString("fr-FR")} Ar</span>
+                                {" · "}Reste : <span className="font-bold">{Math.max(0, contributeGoal.targetAmount - contributeGoal.savedAmount).toLocaleString("fr-FR")} Ar</span>
+                            </p>
+                        )}
+                        <div className='w-full flex flex-col'>
+                            <input type="number" value={contributeAmount} onChange={(e) => setContributeAmount(e.target.value)} placeholder='Montant du versement' className='w-full input input-bordered mb-3' required />
+                            <button className='btn btn-primary mt-3' onClick={handleContribute}>Verser</button>
+                        </div>
+                    </div>
+                </dialog>
+
                 <ul className='grid md:grid-cols-3 gap-5 mt-5'>
                     {goals.map((goal) => (
                         <li key={goal.id} className="flex flex-col gap-2">
                             <SavingsGoalItem goal={goal} enableHover={0} />
                             <div className="flex gap-2">
+                                <button className="btn btn-sm btn-accent flex-1" onClick={() => openContributeModal(goal)}>Verser</button>
                                 <button className="btn btn-sm btn-outline flex-1" onClick={() => openEditModal(goal)}>Modifier</button>
                                 <button className="btn btn-sm btn-ghost flex-1" onClick={() => handleDeleteGoal(goal.id)}>Supprimer</button>
                             </div>

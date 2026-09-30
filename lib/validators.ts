@@ -62,6 +62,11 @@ export const savingsGoalUpdateSchema = savingsGoalInputSchema.extend({
     goalId: z.string().min(1, "Objectif non trouvé"),
 });
 
+export const contributionSchema = z.object({
+    goalId: z.string().min(1, "Objectif non trouvé"),
+    amount: positiveAmount("Montant invalide"),
+});
+
 export const recurringBaseSchema = z.object({
     description: requiredDescription(120),
     amount: positiveAmount("Montant invalide"),

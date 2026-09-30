@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     budgetInputSchema,
+    contributionSchema,
     parseOrThrow,
     recurringInputSchema,
     savingsGoalInputSchema,
@@ -46,6 +47,14 @@ describe("savingsGoalInputSchema", () => {
         expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: 0, targetDate: "nope" })).toThrow(
             "Date cible invalide"
         );
+    });
+});
+
+describe("contributionSchema", () => {
+    it("accepte un versement valide et rejette zéro/négatif", () => {
+        expect(parseOrThrow(contributionSchema, { goalId: "abc", amount: 500 }).amount).toBe(500);
+        expect(() => parseOrThrow(contributionSchema, { goalId: "abc", amount: 0 })).toThrow("Montant invalide");
+        expect(() => parseOrThrow(contributionSchema, { goalId: "", amount: 500 })).toThrow("Objectif non trouvé");
     });
 });
 

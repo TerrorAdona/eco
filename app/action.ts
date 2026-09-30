@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { normalizeTransactionCategory } from "@/type"
-import { budgetInputSchema, budgetUpdateSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema } from "@/lib/validators"
+import { budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema } from "@/lib/validators"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -288,6 +288,22 @@ export async function updateSavingsGoal(email: string, goalId: string, name: str
         })
     } catch (error) {
         console.error("Erreur lors de la modification de l'objectif : ", error)
+        throw error
+    }
+}
+
+export async function contributeToGoal(email: string, goalId: string, amount: number) {
+    try {
+        const { goal } = await assertSavingsGoalOwner(goalId, email)
+        const input = parseOrThrow(contributionSchema, { goalId, amount })
+        const remaining = goal.targetAmount - goal.savedAmount
+        if (input.amount > remaining) throw new Error(`Ce versement dépasse la cible (reste ${remaining.toLocaleString("fr-FR")} Ar)`)
+        await prisma.savingsGoal.update({
+            where: { id: goalId },
+            data: { savedAmount: goal.savedAmount + input.amount }
+        })
+    } catch (error) {
+        console.error("Erreur lors du versement sur l'objectif : ", error)
         throw error
     }
 }
