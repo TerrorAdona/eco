@@ -1,4 +1,4 @@
-import { normalizeTransactionCategory, Transaction } from '@/type';
+import { normalizeRecurringType, normalizeTransactionCategory, Transaction } from '@/type';
 import Link from 'next/link';
 import React from 'react'
 
@@ -13,7 +13,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
         <li key={transaction.id} className='flex justify-between items-center'>
             <div className='my-4'>
                 <button className='btn'>
-                    <div className="badge badge-accent">- {transaction.amount} Ar</div>
+                    <div className="badge badge-accent">{normalizeRecurringType(transaction.type) === "REVENU" ? "+" : "-"} {transaction.amount} Ar</div>
                     {transaction.budgetName}
                 </button>
             </div>

@@ -35,6 +35,7 @@ export interface Transaction {
     id: string;
     amount: number;
     description: string
+    type?: string;
     category: string;
     createdAt: Date;
     budgetName?: string;

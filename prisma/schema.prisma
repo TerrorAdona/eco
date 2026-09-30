@@ -79,6 +79,7 @@ model Transaction {
   id           String     @id @default(uuid())
   description  String
   amount       Float
+  type         String     @default("DEPENSE")
   category     String     @default("Autres")
   budgetId     String?
   budget       Budget?    @relation(fields: [budgetId], references: [id])

@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from "@/lib/prisma"
-import { normalizeTransactionCategory } from "@/type"
+import { normalizeRecurringType, normalizeTransactionCategory } from "@/type"
 import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema } from "@/lib/validators"
 
 async function getUserOrThrow(email: string) {
@@ -132,17 +132,22 @@ async function resolveTransactionAccount(email: string, accountId?: string | nul
     return account.id
 }
 
+function balanceEffect(type: string | null | undefined, amount: number): number {
+    return normalizeRecurringType(type ?? undefined) === "REVENU" ? amount : -amount
+}
+
 export async function addTransactionToBudget(
     budgetId: string,
     amount: number,
     description: string,
     email: string,
     category?: string,
-    accountId?: string | null
+    accountId?: string | null,
+    type?: string
 ) {
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
-        const input = parseOrThrow(transactionInputSchema, { description, amount, category })
+        const input = parseOrThrow(transactionInputSchema, { description, amount, type, category })
         const resolvedAccountId = await resolveTransactionAccount(email, accountId)
 
         const totalTransactions = budget.transactions.reduce((acc, t) => {
@@ -155,17 +160,26 @@ export async function addTransactionToBudget(
         }
 
 
-        await prisma.transaction.create({
-            data: {
-                amount: input.amount,
-                description: input.description,
-                category: input.category,
-                budget: {
-                    connect: {
-                        id: budgetId
-                    }
-                },
-                ...(resolvedAccountId ? { account: { connect: { id: resolvedAccountId } } } : {})
+        await prisma.$transaction(async (tx) => {
+            await tx.transaction.create({
+                data: {
+                    amount: input.amount,
+                    description: input.description,
+                    type: input.type,
+                    category: input.category,
+                    budget: {
+                        connect: {
+                            id: budgetId
+                        }
+                    },
+                    ...(resolvedAccountId ? { account: { connect: { id: resolvedAccountId } } } : {})
+                }
+            })
+            if (resolvedAccountId) {
+                await tx.account.update({
+                    where: { id: resolvedAccountId },
+                    data: { balance: { increment: balanceEffect(input.type, input.amount) } }
+                })
             }
         })
     } catch (error) {
@@ -180,11 +194,12 @@ export async function updateTransaction(
     description: string,
     amount: number,
     category?: string,
-    accountId?: string | null
+    accountId?: string | null,
+    type?: string
 ) {
     try {
         const { budget, transaction } = await assertTransactionOwner(transactionId, email)
-        const input = parseOrThrow(transactionUpdateSchema, { transactionId, description, amount, category })
+        const input = parseOrThrow(transactionUpdateSchema, { transactionId, description, amount, type, category })
         const resolvedAccountId = accountId === undefined ? transaction.accountId : await resolveTransactionAccount(email, accountId)
 
         const totalWithoutCurrent = budget.transactions.reduce((acc, t) => {
@@ -194,13 +209,41 @@ export async function updateTransaction(
             throw new Error("Le budget est depassé")
         }
 
-        await prisma.transaction.update({
-            where: { id: transactionId },
-            data: {
-                description: input.description,
-                amount: input.amount,
-                category: category === undefined ? transaction.category : input.category,
-                accountId: resolvedAccountId
+        const oldEffect = balanceEffect(transaction.type, transaction.amount)
+        const newEffect = balanceEffect(type === undefined ? transaction.type : input.type, input.amount)
+
+        await prisma.$transaction(async (tx) => {
+            await tx.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    description: input.description,
+                    amount: input.amount,
+                    type: type === undefined ? transaction.type : input.type,
+                    category: category === undefined ? transaction.category : input.category,
+                    accountId: resolvedAccountId
+                }
+            })
+            if (transaction.accountId && resolvedAccountId && transaction.accountId === resolvedAccountId) {
+                const delta = newEffect - oldEffect
+                if (delta !== 0) {
+                    await tx.account.update({
+                        where: { id: resolvedAccountId },
+                        data: { balance: { increment: delta } }
+                    })
+                }
+            } else {
+                if (transaction.accountId) {
+                    await tx.account.update({
+                        where: { id: transaction.accountId },
+                        data: { balance: { increment: -oldEffect } }
+                    })
+                }
+                if (resolvedAccountId) {
+                    await tx.account.update({
+                        where: { id: resolvedAccountId },
+                        data: { balance: { increment: newEffect } }
+                    })
+                }
             }
         })
         void transaction
@@ -231,10 +274,19 @@ export const deleteBudget = async (budgetId: string, email: string) => {
 
 export async function deleteTransaction(transactionId: string, email: string) {
     try {
-        await assertTransactionOwner(transactionId, email)
-        await prisma.transaction.delete({
-            where: {
-                id: transactionId
+        const { transaction } = await assertTransactionOwner(transactionId, email)
+        const reverseEffect = -balanceEffect(transaction.type, transaction.amount)
+        await prisma.$transaction(async (tx) => {
+            await tx.transaction.delete({
+                where: {
+                    id: transactionId
+                }
+            })
+            if (transaction.accountId) {
+                await tx.account.update({
+                    where: { id: transaction.accountId },
+                    data: { balance: { increment: reverseEffect } }
+                })
             }
         })
     } catch (error) {

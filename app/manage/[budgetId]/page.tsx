@@ -2,7 +2,7 @@
 import { addTransactionToBudget, deleteBudget, deleteTransaction, getAccounts, getTransactionByBudgetId, updateBudget, updateTransaction } from '@/app/action'
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
-import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeTransactionCategory, TRANSACTION_CATEGORIES, Transaction } from '@/type'
+import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeRecurringType, normalizeTransactionCategory, RECURRING_TYPE_LABELS, RECURRING_TYPES, TRANSACTION_CATEGORIES, Transaction } from '@/type'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
@@ -17,6 +17,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [description, setDescription] = useState<string>('')
     const [amount, setAmount] = useState<string>('')
     const [category, setCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
+    const [transactionType, setTransactionType] = useState<string>("DEPENSE")
     const [transactionAccountId, setTransactionAccountId] = useState<string>("none")
     const [accountOptions, setAccountOptions] = useState<{ id: string; name: string }[]>([])
     const [notification, setNotification] = useState<string>("")
@@ -60,6 +61,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         setAmount("")
         setDescription("")
         setCategory(DEFAULT_TRANSACTION_CATEGORY)
+        setTransactionType("DEPENSE")
         setTransactionAccountId("none")
         setEditingTransactionId(null)
     }
@@ -68,6 +70,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         setDescription(transaction.description)
         setAmount(String(transaction.amount))
         setCategory(normalizeTransactionCategory(transaction.category))
+        setTransactionType(normalizeRecurringType(transaction.type))
         setTransactionAccountId(transaction.accountId ?? "none")
         setEditingTransactionId(transaction.id)
     }
@@ -90,10 +93,10 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 return
             }
             if (editingTransactionId) {
-                await updateTransaction(editingTransactionId, email, description, amountNumber, category, transactionAccountId)
+                await updateTransaction(editingTransactionId, email, description, amountNumber, category, transactionAccountId, transactionType)
                 setNotification("Transaction modifiée avec succès")
             } else {
-                await addTransactionToBudget(budgetId!, amountNumber, description, email, category, transactionAccountId)
+                await addTransactionToBudget(budgetId!, amountNumber, description, email, category, transactionAccountId, transactionType)
                 setNotification("Transaction ajoutée avec succès")
             }
             fetchBudgetData(budgetId!, email)
@@ -284,17 +287,30 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                         className="input input-bordered w-full"
                                     />
 
-                                    <select
-                                        id="category"
-                                        value={category}
-                                        onChange={(e) => setCategory(e.target.value)}
-                                        className="select select-bordered w-full"
-                                        aria-label="Catégorie de la transaction"
-                                    >
-                                        {TRANSACTION_CATEGORIES.map((c) => (
-                                            <option key={c} value={c}>{c}</option>
-                                        ))}
-                                    </select>
+                                    <div className="flex gap-2">
+                                        <select
+                                            id="tx-type"
+                                            value={transactionType}
+                                            onChange={(e) => setTransactionType(e.target.value)}
+                                            className="select select-bordered flex-1"
+                                            aria-label="Type de transaction"
+                                        >
+                                            {RECURRING_TYPES.map((t) => (
+                                                <option key={t} value={t}>{RECURRING_TYPE_LABELS[t]}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            id="category"
+                                            value={category}
+                                            onChange={(e) => setCategory(e.target.value)}
+                                            className="select select-bordered flex-1"
+                                            aria-label="Catégorie de la transaction"
+                                        >
+                                            {TRANSACTION_CATEGORIES.map((c) => (
+                                                <option key={c} value={c}>{c}</option>
+                                            ))}
+                                        </select>
+                                    </div>
 
                                     <select
                                         id="account"
@@ -420,7 +436,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                     group-hover:text-primary-content
                                 "
                                                     >
-                                                        -{transaction.amount.toLocaleString("fr-FR")} Ar
+                                                        {normalizeRecurringType(transaction.type) === "REVENU" ? "+" : "-"}{transaction.amount.toLocaleString("fr-FR")} Ar
                                                     </div>
                                                     <div className="flex shrink-0 gap-1">
                                                         <button

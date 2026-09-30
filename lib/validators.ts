@@ -39,6 +39,7 @@ export const budgetUpdateSchema = budgetInputSchema.extend({
 export const transactionInputSchema = z.object({
     description: requiredDescription(120),
     amount: positiveAmount("Montant invalide"),
+    type: z.string().optional().transform((v) => normalizeRecurringType(v)),
     category: lenientCategory,
 });
 
