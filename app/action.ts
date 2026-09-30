@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { normalizeRecurringType, normalizeTransactionCategory } from "@/type"
-import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema } from "@/lib/validators"
+import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -565,11 +565,159 @@ export async function updateAccount(email: string, accountId: string, name: stri
 export async function deleteAccount(accountId: string, email: string) {
     try {
         await assertAccountOwner(accountId, email);
+        const [linkedTransactions, linkedSource, linkedDest] = await Promise.all([
+            prisma.transaction.count({ where: { accountId: accountId } }),
+            prisma.transfer.count({ where: { sourceAccountId: accountId } }),
+            prisma.transfer.count({ where: { destAccountId: accountId } }),
+        ]);
+        if (linkedTransactions + linkedSource + linkedDest > 0) {
+            throw new Error("Ce compte est lié à des transactions ou transferts et ne peut pas être supprimé");
+        }
         await prisma.account.delete({
             where: { id: accountId }
         });
     } catch (error) {
         console.error("Erreur lors de la suppression du compte : ", error);
+        throw error;
+    }
+}
+
+async function assertTransferOwner(transferId: string, email: string) {
+    const user = await getUserOrThrow(email);
+    const transfer = await prisma.transfer.findUnique({
+        where: { id: transferId },
+        include: {
+            sourceAccount: true,
+            destAccount: true
+        }
+    });
+    if (!transfer) throw new Error("Transfert non trouvé");
+    if (transfer.userId !== user.id) throw new Error("Accès non autorisé");
+    return { user, transfer };
+}
+
+async function resolveTransferAccounts(userId: string, sourceAccountId: string, destAccountId: string) {
+    const [source, dest] = await Promise.all([
+        prisma.account.findUnique({ where: { id: sourceAccountId } }),
+        prisma.account.findUnique({ where: { id: destAccountId } }),
+    ]);
+    if (!source || !dest) throw new Error("Compte non trouvé");
+    if (source.userId !== userId || dest.userId !== userId) throw new Error("Accès non autorisé");
+    if (source.currency !== dest.currency) {
+        throw new Error("Transfert multi-devises non supporté pour l'instant");
+    }
+    return { source, dest };
+}
+
+export async function addTransfer(email: string, sourceAccountId: string, destAccountId: string, amount: number, description?: string | null) {
+    try {
+        const user = await getUserOrThrow(email);
+        const input = parseOrThrow(transferInputSchema, { sourceAccountId, destAccountId, amount, description });
+        await resolveTransferAccounts(user.id, input.sourceAccountId, input.destAccountId);
+        await prisma.$transaction(async (tx) => {
+            await tx.transfer.create({
+                data: {
+                    amount: input.amount,
+                    description: description?.trim() || null,
+                    sourceAccountId: input.sourceAccountId,
+                    destAccountId: input.destAccountId,
+                    userId: user.id
+                }
+            });
+            await tx.account.update({
+                where: { id: input.sourceAccountId },
+                data: { balance: { decrement: input.amount } }
+            });
+            await tx.account.update({
+                where: { id: input.destAccountId },
+                data: { balance: { increment: input.amount } }
+            });
+        });
+    } catch (error) {
+        console.error("Erreur lors du transfert : ", error);
+        throw error;
+    }
+}
+
+export async function getTransfersByUser(email: string) {
+    try {
+        const user = await getUserOrThrow(email);
+        const transfers = await prisma.transfer.findMany({
+            where: { userId: user.id },
+            include: {
+                sourceAccount: { select: { id: true, name: true, currency: true } },
+                destAccount: { select: { id: true, name: true } }
+            },
+            orderBy: { createdAt: "desc" }
+        });
+        return transfers.map((t) => ({
+            ...t,
+            sourceAccountName: t.sourceAccount?.name ?? "",
+            destAccountName: t.destAccount?.name ?? "",
+            currency: t.sourceAccount?.currency ?? ""
+        }));
+    } catch (error) {
+        console.error("Erreur lors de la récupération des transferts : ", error);
+        throw error;
+    }
+}
+
+export async function updateTransfer(email: string, transferId: string, sourceAccountId: string, destAccountId: string, amount: number, description?: string | null) {
+    try {
+        const { user, transfer } = await assertTransferOwner(transferId, email);
+        const input = parseOrThrow(transferUpdateSchema, { transferId, sourceAccountId, destAccountId, amount, description });
+        await resolveTransferAccounts(user.id, input.sourceAccountId, input.destAccountId);
+        await prisma.$transaction(async (tx) => {
+            await tx.account.update({
+                where: { id: transfer.sourceAccountId },
+                data: { balance: { increment: transfer.amount } }
+            });
+            await tx.account.update({
+                where: { id: transfer.destAccountId },
+                data: { balance: { decrement: transfer.amount } }
+            });
+            await tx.transfer.update({
+                where: { id: transferId },
+                data: {
+                    amount: input.amount,
+                    description: description?.trim() || null,
+                    sourceAccountId: input.sourceAccountId,
+                    destAccountId: input.destAccountId
+                }
+            });
+            await tx.account.update({
+                where: { id: input.sourceAccountId },
+                data: { balance: { decrement: input.amount } }
+            });
+            await tx.account.update({
+                where: { id: input.destAccountId },
+                data: { balance: { increment: input.amount } }
+            });
+        });
+    } catch (error) {
+        console.error("Erreur lors de la modification du transfert : ", error);
+        throw error;
+    }
+}
+
+export async function deleteTransfer(transferId: string, email: string) {
+    try {
+        const { transfer } = await assertTransferOwner(transferId, email);
+        await prisma.$transaction(async (tx) => {
+            await tx.transfer.delete({
+                where: { id: transferId }
+            });
+            await tx.account.update({
+                where: { id: transfer.sourceAccountId },
+                data: { balance: { increment: transfer.amount } }
+            });
+            await tx.account.update({
+                where: { id: transfer.destAccountId },
+                data: { balance: { decrement: transfer.amount } }
+            });
+        });
+    } catch (error) {
+        console.error("Erreur lors de la suppression du transfert : ", error);
         throw error;
     }
 }

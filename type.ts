@@ -83,6 +83,18 @@ export interface Account {
     updatedAt: Date;
 }
 
+export interface Transfer {
+    id: string;
+    amount: number;
+    description: string | null;
+    sourceAccountId: string;
+    destAccountId: string;
+    sourceAccountName?: string;
+    destAccountName?: string;
+    currency?: string;
+    createdAt: Date;
+}
+
 export interface SavingsGoal {
     id: string;
     name: string;

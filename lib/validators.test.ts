@@ -7,6 +7,7 @@ import {
     recurringInputSchema,
     savingsGoalInputSchema,
     transactionInputSchema,
+    transferInputSchema,
 } from "./validators";
 
 describe("budgetInputSchema", () => {
@@ -74,6 +75,25 @@ describe("accountInputSchema", () => {
 
     it("autorise un solde négatif (découvert)", () => {
         expect(parseOrThrow(accountInputSchema, { name: "X", type: "COURANT", currency: "EUR", balance: -150.5 }).balance).toBe(-150.5);
+    });
+});
+
+describe("transferInputSchema", () => {
+    it("accepte un transfert valide", () => {
+        const parsed = parseOrThrow(transferInputSchema, { sourceAccountId: "a", destAccountId: "b", amount: 20000, description: null });
+        expect(parsed.amount).toBe(20000);
+    });
+
+    it("rejette même compte, montant nul et comptes manquants", () => {
+        expect(() => parseOrThrow(transferInputSchema, { sourceAccountId: "a", destAccountId: "a", amount: 100 })).toThrow(
+            "Les comptes source et destination doivent être différents"
+        );
+        expect(() => parseOrThrow(transferInputSchema, { sourceAccountId: "a", destAccountId: "b", amount: 0 })).toThrow(
+            "Montant invalide"
+        );
+        expect(() => parseOrThrow(transferInputSchema, { sourceAccountId: "", destAccountId: "b", amount: 100 })).toThrow(
+            "Compte source requis"
+        );
     });
 });
 

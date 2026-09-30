@@ -20,6 +20,20 @@ model User {
   savingsGoals  SavingsGoal[]
   recurringTransactions RecurringTransaction[]
   accounts      Account[]
+  transfers     Transfer[]
+}
+
+model Transfer {
+  id              String   @id @default(uuid())
+  amount          Float
+  description     String?
+  sourceAccountId String
+  sourceAccount   Account  @relation("TransferSource", fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  destAccountId   String
+  destAccount     Account  @relation("TransferDest", fields: [destAccountId], references: [id], onDelete: Restrict)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
 }
 
 model Account {
@@ -31,6 +45,8 @@ model Account {
   userId       String
   user         User          @relation(fields: [userId], references: [id])
   transactions Transaction[]
+  sourceTransfers Transfer[] @relation("TransferSource")
+  destTransfers   Transfer[] @relation("TransferDest")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }

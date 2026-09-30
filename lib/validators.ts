@@ -112,3 +112,19 @@ export const accountInputSchema = z.object({
 export const accountUpdateSchema = accountInputSchema.extend({
     accountId: z.string().min(1, "Compte non trouvé"),
 });
+
+export const transferBaseSchema = z.object({
+    sourceAccountId: z.string().min(1, "Compte source requis"),
+    destAccountId: z.string().min(1, "Compte destination requis"),
+    amount: positiveAmount("Montant invalide"),
+    description: z.string().trim().max(120, "Description trop longue (120 caractères maximum)").optional().nullable(),
+});
+
+export const transferInputSchema = transferBaseSchema.refine(
+    (data) => data.sourceAccountId !== data.destAccountId,
+    { message: "Les comptes source et destination doivent être différents", path: ["destAccountId"] }
+);
+
+export const transferUpdateSchema = transferInputSchema.extend({
+    transferId: z.string().min(1, "Transfert non trouvé"),
+});
