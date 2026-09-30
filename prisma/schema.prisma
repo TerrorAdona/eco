@@ -23,15 +23,16 @@ model User {
 }
 
 model Account {
-  id        String   @id @default(uuid())
-  name      String
-  type      String   @default("COURANT")
-  currency  String   @default("MGA")
-  balance   Float    @default(0)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(uuid())
+  name         String
+  type         String        @default("COURANT")
+  currency     String        @default("MGA")
+  balance      Float         @default(0)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model RecurringTransaction {
@@ -81,5 +82,7 @@ model Transaction {
   category     String     @default("Autres")
   budgetId     String?
   budget       Budget?    @relation(fields: [budgetId], references: [id])
+  accountId    String?
+  account      Account?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
   createdAt    DateTime   @default(now())
 }

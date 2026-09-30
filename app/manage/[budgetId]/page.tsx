@@ -1,5 +1,5 @@
 "use client"
-import { addTransactionToBudget, deleteBudget, deleteTransaction, getTransactionByBudgetId, updateBudget, updateTransaction } from '@/app/action'
+import { addTransactionToBudget, deleteBudget, deleteTransaction, getAccounts, getTransactionByBudgetId, updateBudget, updateTransaction } from '@/app/action'
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
 import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeTransactionCategory, TRANSACTION_CATEGORIES, Transaction } from '@/type'
@@ -17,6 +17,8 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [description, setDescription] = useState<string>('')
     const [amount, setAmount] = useState<string>('')
     const [category, setCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
+    const [transactionAccountId, setTransactionAccountId] = useState<string>("none")
+    const [accountOptions, setAccountOptions] = useState<{ id: string; name: string }[]>([])
     const [notification, setNotification] = useState<string>("")
     const [showEditBudget, setShowEditBudget] = useState<boolean>(false)
     const [editName, setEditName] = useState<string>('')
@@ -34,6 +36,8 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
             if (id && email) {
                 const budgetData = await getTransactionByBudgetId(id, email)
                 setBudget(budgetData)
+                const accounts = await getAccounts(email)
+                setAccountOptions(accounts.map((a) => ({ id: a.id, name: a.name })))
             }
         } catch (error) {
             console.error('Erreur lors de la récupération du budget:', error)
@@ -56,6 +60,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         setAmount("")
         setDescription("")
         setCategory(DEFAULT_TRANSACTION_CATEGORY)
+        setTransactionAccountId("none")
         setEditingTransactionId(null)
     }
 
@@ -63,6 +68,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         setDescription(transaction.description)
         setAmount(String(transaction.amount))
         setCategory(normalizeTransactionCategory(transaction.category))
+        setTransactionAccountId(transaction.accountId ?? "none")
         setEditingTransactionId(transaction.id)
     }
 
@@ -84,10 +90,10 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 return
             }
             if (editingTransactionId) {
-                await updateTransaction(editingTransactionId, email, description, amountNumber, category)
+                await updateTransaction(editingTransactionId, email, description, amountNumber, category, transactionAccountId)
                 setNotification("Transaction modifiée avec succès")
             } else {
-                await addTransactionToBudget(budgetId!, amountNumber, description, email, category)
+                await addTransactionToBudget(budgetId!, amountNumber, description, email, category, transactionAccountId)
                 setNotification("Transaction ajoutée avec succès")
             }
             fetchBudgetData(budgetId!, email)
@@ -290,6 +296,19 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                         ))}
                                     </select>
 
+                                    <select
+                                        id="account"
+                                        value={transactionAccountId}
+                                        onChange={(e) => setTransactionAccountId(e.target.value)}
+                                        className="select select-bordered w-full"
+                                        aria-label="Compte associé (optionnel)"
+                                    >
+                                        <option value="none">Sans compte associé</option>
+                                        {accountOptions.map((a) => (
+                                            <option key={a.id} value={a.id}>{a.name}</option>
+                                        ))}
+                                    </select>
+
                                     <button
                                         onClick={handleSubmitTransaction}
                                         className="btn btn-primary w-full"
@@ -358,8 +377,15 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                                                 {transaction.description}
                                                             </span>
 
-                                                            <span className="badge badge-secondary badge-sm w-fit">
-                                                                {normalizeTransactionCategory(transaction.category)}
+                                                            <span className="flex flex-wrap gap-1">
+                                                                <span className="badge badge-secondary badge-sm w-fit">
+                                                                    {normalizeTransactionCategory(transaction.category)}
+                                                                </span>
+                                                                {(transaction.account?.name || transaction.accountName) && (
+                                                                    <span className="badge badge-accent badge-sm w-fit">
+                                                                        {transaction.account?.name || transaction.accountName}
+                                                                    </span>
+                                                                )}
                                                             </span>
 
                                                             <span className="badge badge-outline">

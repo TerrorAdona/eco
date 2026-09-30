@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeRecurringFrequency, normalizeRecurringType, normalizeTransactionCategory } from "@/type";
+import { ACCOUNT_CURRENCIES, ACCOUNT_TYPES, normalizeRecurringFrequency, normalizeRecurringType, normalizeTransactionCategory } from "@/type";
 
 export function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown): T {
     const result = schema.safeParse(data);
@@ -90,4 +90,24 @@ export const recurringInputSchema = recurringBaseSchema.refine(
 
 export const recurringUpdateSchema = recurringInputSchema.extend({
     recurringId: z.string().min(1, "Transaction récurrente non trouvée"),
+});
+
+const finiteBalance = (message: string) =>
+    z.custom<number>((v) => typeof v === "number" && Number.isFinite(v), message);
+
+export const accountInputSchema = z.object({
+    name: requiredName("Nom du compte", 60),
+    type: z.string().refine(
+        (v): v is (typeof ACCOUNT_TYPES)[number] => (ACCOUNT_TYPES as readonly string[]).includes(v),
+        "Type de compte invalide"
+    ),
+    currency: z.string().refine(
+        (v): v is (typeof ACCOUNT_CURRENCIES)[number] => (ACCOUNT_CURRENCIES as readonly string[]).includes(v),
+        "Devise invalide"
+    ),
+    balance: finiteBalance("Solde invalide"),
+});
+
+export const accountUpdateSchema = accountInputSchema.extend({
+    accountId: z.string().min(1, "Compte non trouvé"),
 });

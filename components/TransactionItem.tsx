@@ -20,6 +20,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
             <div className='md:hidden flex flex-col items-end'>
                 <span className='font-bold text-sm'>{transaction.description}</span>
                 <span className="badge badge-secondary badge-sm">{normalizeTransactionCategory(transaction.category)}</span>
+                {transaction.accountName && (
+                    <span className="badge badge-accent badge-sm">{transaction.accountName}</span>
+                )}
                 <span className='text-sm'>
                     {createdAt.toLocaleDateString("fr-FR")} à {" "}
                     {createdAt.toLocaleTimeString("fr-FR", {
@@ -35,6 +38,9 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ transaction }) => {
                     {transaction.description}
                 </span>
                 <span className="badge badge-secondary badge-sm">{normalizeTransactionCategory(transaction.category)}</span>
+                {transaction.accountName && (
+                    <span className="badge badge-accent badge-sm">{transaction.accountName}</span>
+                )}
             </div>
 
             <div className='hidden md:flex'>

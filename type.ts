@@ -39,6 +39,47 @@ export interface Transaction {
     createdAt: Date;
     budgetName?: string;
     budgetId?: string | null;
+    accountName?: string;
+    accountId?: string | null;
+    account?: { id: string; name: string } | null;
+}
+
+export const ACCOUNT_TYPES = [
+    "COURANT",
+    "EPARGNE",
+    "ESPECES",
+] as const;
+
+export type AccountType = typeof ACCOUNT_TYPES[number];
+
+export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+    COURANT: "Compte courant",
+    EPARGNE: "Épargne",
+    ESPECES: "Espèces",
+};
+
+export const ACCOUNT_CURRENCIES = [
+    "MGA",
+    "EUR",
+    "USD",
+] as const;
+
+export type AccountCurrency = typeof ACCOUNT_CURRENCIES[number];
+
+export const ACCOUNT_CURRENCY_LABELS: Record<AccountCurrency, string> = {
+    MGA: "Ariary",
+    EUR: "Euro",
+    USD: "Dollar",
+};
+
+export interface Account {
+    id: string;
+    name: string;
+    type: string;
+    currency: string;
+    balance: number;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface SavingsGoal {

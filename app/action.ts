@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { normalizeTransactionCategory } from "@/type"
-import { budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema } from "@/lib/validators"
+import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema } from "@/lib/validators"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -17,7 +17,7 @@ async function assertBudgetOwner(budgetId: string, email: string) {
     const user = await getUserOrThrow(email)
     const budget = await prisma.budget.findUnique({
         where: { id: budgetId },
-        include: { transactions: true }
+        include: { transactions: { include: { account: { select: { id: true, name: true } } } } }
     })
     if (!budget) throw new Error("Budget non trouvé")
     if (budget.userId !== user.id) throw new Error("Accès non autorisé")
@@ -126,16 +126,24 @@ export async function getTransactionByBudgetId(budgetId: string, email: string) 
     }
 }
 
+async function resolveTransactionAccount(email: string, accountId?: string | null) {
+    if (!accountId || accountId === "none") return null
+    const { account } = await assertAccountOwner(accountId, email)
+    return account.id
+}
+
 export async function addTransactionToBudget(
     budgetId: string,
     amount: number,
     description: string,
     email: string,
-    category?: string
+    category?: string,
+    accountId?: string | null
 ) {
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
         const input = parseOrThrow(transactionInputSchema, { description, amount, category })
+        const resolvedAccountId = await resolveTransactionAccount(email, accountId)
 
         const totalTransactions = budget.transactions.reduce((acc, t) => {
             return acc + t.amount
@@ -156,7 +164,8 @@ export async function addTransactionToBudget(
                     connect: {
                         id: budgetId
                     }
-                }
+                },
+                ...(resolvedAccountId ? { account: { connect: { id: resolvedAccountId } } } : {})
             }
         })
     } catch (error) {
@@ -170,11 +179,13 @@ export async function updateTransaction(
     email: string,
     description: string,
     amount: number,
-    category?: string
+    category?: string,
+    accountId?: string | null
 ) {
     try {
         const { budget, transaction } = await assertTransactionOwner(transactionId, email)
         const input = parseOrThrow(transactionUpdateSchema, { transactionId, description, amount, category })
+        const resolvedAccountId = accountId === undefined ? transaction.accountId : await resolveTransactionAccount(email, accountId)
 
         const totalWithoutCurrent = budget.transactions.reduce((acc, t) => {
             return t.id === transactionId ? acc : acc + t.amount
@@ -188,7 +199,8 @@ export async function updateTransaction(
             data: {
                 description: input.description,
                 amount: input.amount,
-                category: category === undefined ? transaction.category : input.category
+                category: category === undefined ? transaction.category : input.category,
+                accountId: resolvedAccountId
             }
         })
         void transaction
@@ -427,6 +439,89 @@ export async function deleteRecurringTransaction(recurringId: string, email: str
     }
 }
 
+async function assertAccountOwner(accountId: string, email: string) {
+    const user = await getUserOrThrow(email);
+    const account = await prisma.account.findUnique({
+        where: { id: accountId }
+    });
+    if (!account) throw new Error("Compte non trouvé");
+    if (account.userId !== user.id) throw new Error("Accès non autorisé");
+    return { user, account };
+}
+
+export async function getAccounts(email: string) {
+    try {
+        const user = await getUserOrThrow(email);
+        return await prisma.account.findMany({
+            where: { userId: user.id },
+            orderBy: { name: "asc" }
+        });
+    } catch (error) {
+        console.error("Erreur lors de la récupération des comptes : ", error);
+        throw error;
+    }
+}
+
+export async function getAccountById(accountId: string, email: string) {
+    try {
+        const { account } = await assertAccountOwner(accountId, email);
+        return account;
+    } catch (error) {
+        console.error("Erreur lors de la récupération du compte : ", error);
+        throw error;
+    }
+}
+
+export async function addAccount(email: string, name: string, type: string, currency: string, balance: number) {
+    try {
+        const user = await getUserOrThrow(email);
+        const input = parseOrThrow(accountInputSchema, { name, type, currency, balance });
+        await prisma.account.create({
+            data: {
+                name: input.name,
+                type: input.type,
+                currency: input.currency,
+                balance: input.balance,
+                userId: user.id
+            }
+        });
+    } catch (error) {
+        console.error("Erreur lors de l'ajout du compte : ", error);
+        throw error;
+    }
+}
+
+export async function updateAccount(email: string, accountId: string, name: string, type: string, currency: string, balance: number) {
+    try {
+        await assertAccountOwner(accountId, email);
+        const input = parseOrThrow(accountUpdateSchema, { accountId, name, type, currency, balance });
+        await prisma.account.update({
+            where: { id: accountId },
+            data: {
+                name: input.name,
+                type: input.type,
+                currency: input.currency,
+                balance: input.balance
+            }
+        });
+    } catch (error) {
+        console.error("Erreur lors de la modification du compte : ", error);
+        throw error;
+    }
+}
+
+export async function deleteAccount(accountId: string, email: string) {
+    try {
+        await assertAccountOwner(accountId, email);
+        await prisma.account.delete({
+            where: { id: accountId }
+        });
+    } catch (error) {
+        console.error("Erreur lors de la suppression du compte : ", error);
+        throw error;
+    }
+}
+
 export async function getDashboardData(email: string) {
     try {
         if (!email) throw new Error("Utilisateur non trouvé")
@@ -514,7 +609,8 @@ export async function getTransactionsByEmailAndPeriod(email: string, period: str
                 ...((minAmount !== undefined || maxAmount !== undefined) ? { amount: { ...(minAmount !== undefined ? { gte: minAmount } : {}), ...(maxAmount !== undefined ? { lte: maxAmount } : {}) } } : {}),
             },
             include: {
-                budget: { select: { id: true, name: true } }
+                budget: { select: { id: true, name: true } },
+                account: { select: { id: true, name: true } }
             },
             orderBy: { createdAt: "desc" }
         })
@@ -522,7 +618,9 @@ export async function getTransactionsByEmailAndPeriod(email: string, period: str
         return transactions.map(transaction => ({
             ...transaction,
             budgetName: transaction.budget?.name ?? "",
-            budgetId: transaction.budget?.id ?? transaction.budgetId
+            budgetId: transaction.budget?.id ?? transaction.budgetId,
+            accountName: transaction.account?.name ?? "",
+            accountId: transaction.account?.id ?? transaction.accountId
         }));
     } catch (error) {
         console.error("Erreur lors de la récupération des transactions : ", error)

@@ -51,6 +51,7 @@ const Navbar = () => {
                                     <Link href={"/budgets"} className="btn btn-ghost btn-sm">Mes budgets</Link>
                                     <Link href={"/transactions"} className="btn btn-ghost btn-sm">Mes transactions</Link>
                                     <Link href={"/objectifs"} className="btn btn-ghost btn-sm">Objectifs</Link>
+                                    <Link href={"/comptes"} className="btn btn-ghost btn-sm">Comptes</Link>
                                     <Link href={"/recurrents"} className="btn btn-ghost btn-sm">Récurrents</Link>
                                     <Link href={"/dashboard"} className="btn btn-ghost btn-sm">Tableau de bord</Link>
                                 </div>
@@ -66,6 +67,7 @@ const Navbar = () => {
                                         <li><Link href={"/budgets"}>Mes budgets</Link></li>
                                         <li><Link href={"/transactions"}>Mes transactions</Link></li>
                                         <li><Link href={"/objectifs"}>Objectifs</Link></li>
+                                        <li><Link href={"/comptes"}>Comptes</Link></li>
                                         <li><Link href={"/recurrents"}>Récurrents</Link></li>
                                         <li><Link href={"/dashboard"}>Tableau de bord</Link></li>
                                     </ul>

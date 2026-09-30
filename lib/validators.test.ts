@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    accountInputSchema,
     budgetInputSchema,
     contributionSchema,
     parseOrThrow,
@@ -47,6 +48,32 @@ describe("savingsGoalInputSchema", () => {
         expect(() => parseOrThrow(savingsGoalInputSchema, { name: "X", targetAmount: 100, savedAmount: 0, targetDate: "nope" })).toThrow(
             "Date cible invalide"
         );
+    });
+});
+
+describe("accountInputSchema", () => {
+    it("accepte un compte valide", () => {
+        const parsed = parseOrThrow(accountInputSchema, { name: "Courant", type: "COURANT", currency: "MGA", balance: 1000 });
+        expect(parsed.name).toBe("Courant");
+    });
+
+    it("rejette nom vide, type/devise inconnus et solde non fini", () => {
+        expect(() => parseOrThrow(accountInputSchema, { name: "  ", type: "COURANT", currency: "MGA", balance: 0 })).toThrow(
+            "Nom du compte requis"
+        );
+        expect(() => parseOrThrow(accountInputSchema, { name: "X", type: "LIVRET", currency: "MGA", balance: 0 })).toThrow(
+            "Type de compte invalide"
+        );
+        expect(() => parseOrThrow(accountInputSchema, { name: "X", type: "COURANT", currency: "CHF", balance: 0 })).toThrow(
+            "Devise invalide"
+        );
+        expect(() => parseOrThrow(accountInputSchema, { name: "X", type: "COURANT", currency: "MGA", balance: NaN })).toThrow(
+            "Solde invalide"
+        );
+    });
+
+    it("autorise un solde négatif (découvert)", () => {
+        expect(parseOrThrow(accountInputSchema, { name: "X", type: "COURANT", currency: "EUR", balance: -150.5 }).balance).toBe(-150.5);
     });
 });
 
