@@ -6,6 +6,7 @@ import {
     parseOrThrow,
     recurringInputSchema,
     savingsGoalInputSchema,
+    topUpSchema,
     transactionInputSchema,
     transferInputSchema,
 } from "./validators";
@@ -94,6 +95,14 @@ describe("transferInputSchema", () => {
         expect(() => parseOrThrow(transferInputSchema, { sourceAccountId: "", destAccountId: "b", amount: 100 })).toThrow(
             "Compte source requis"
         );
+    });
+});
+
+describe("topUpSchema", () => {
+    it("accepte un rechargement valide et rejette zéro/négatif", () => {
+        expect(parseOrThrow(topUpSchema, { accountId: "abc", amount: 20000 }).amount).toBe(20000);
+        expect(() => parseOrThrow(topUpSchema, { accountId: "abc", amount: 0 })).toThrow("Montant invalide");
+        expect(() => parseOrThrow(topUpSchema, { accountId: "", amount: 100 })).toThrow("Compte non trouvé");
     });
 });
 

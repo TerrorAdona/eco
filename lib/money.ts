@@ -29,3 +29,20 @@ export function convertAmount(amount: number, rate: number): number {
     }
     return Math.round(amount * rate * 100) / 100;
 }
+
+export interface FundableAccount {
+    id: string;
+    name: string;
+    balance: number;
+}
+
+export function suggestSufficientAccounts<T extends FundableAccount>(
+    accounts: T[],
+    amount: number,
+    excludeAccountId?: string | null
+): T[] {
+    if (!Number.isFinite(amount) || amount <= 0) return [];
+    return accounts
+        .filter((a) => a.id !== excludeAccountId && a.balance >= amount)
+        .sort((a, b) => a.balance - b.balance);
+}

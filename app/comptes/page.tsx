@@ -3,7 +3,7 @@
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
 import React, { useCallback, useEffect, useState } from 'react'
-import { addAccount, deleteAccount, getAccounts, updateAccount } from '../action'
+import { addAccount, deleteAccount, getAccounts, topUpAccount, updateAccount } from '../action'
 import Notification from '@/components/Notification'
 import { ACCOUNT_CURRENCIES, ACCOUNT_CURRENCY_LABELS, ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES, Account } from '@/type'
 import AccountItem from '@/components/AccountItem'
@@ -19,6 +19,8 @@ const Page = () => {
     const [accountBalance, setAccountBalance] = useState<string>("")
     const [accounts, setAccounts] = useState<Account[]>([])
     const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
+    const [topUpAccountState, setTopUpAccountState] = useState<Account | null>(null)
+    const [topUpAmount, setTopUpAmount] = useState<string>("")
 
     const [notification, setNotification] = useState<string>("")
     const closeNotification = () => {
@@ -96,6 +98,35 @@ const Page = () => {
             resetForm()
         } catch (error: unknown) {
             setNotification(getErrorMessage(error, "Erreur lors de l'enregistrement du compte"))
+        }
+    }
+
+    const openTopUpModal = (account: Account) => {
+        setTopUpAccountState(account)
+        setTopUpAmount("")
+        const modal = document.getElementById("topup_modal") as HTMLDialogElement | null
+        modal?.showModal()
+    }
+
+    const closeTopUpModal = () => {
+        const modal = document.getElementById("topup_modal") as HTMLDialogElement | null
+        modal?.close()
+        setTopUpAccountState(null)
+        setTopUpAmount("")
+    }
+
+    const handleTopUp = async () => {
+        if (!topUpAccountState) return
+        try {
+            const email = getUserEmail()
+            if (!email) throw new Error("Utilisateur non trouvé")
+            const amount = parseFloat(topUpAmount)
+            await topUpAccount(email, topUpAccountState.id, amount)
+            setNotification(`Compte rechargé de ${amount.toLocaleString("fr-FR")} ${topUpAccountState.currency}`)
+            await fetchAccounts()
+            closeTopUpModal()
+        } catch (error: unknown) {
+            setNotification(getErrorMessage(error, "Erreur lors du rechargement"))
         }
     }
 
@@ -179,21 +210,41 @@ const Page = () => {
                         </p>
                     </div>
                 ) : (
-                    <ul className='grid md:grid-cols-3 gap-5 mt-5'>
-                        {accounts.map((account) => (
-                            <li key={account.id} className="flex flex-col gap-2">
-                                <AccountItem account={account} enableHover={0} />
-                                <div className="flex gap-2">
-                                    <button className="btn btn-sm btn-outline flex-1" onClick={() => openEditModal(account)}>Modifier</button>
-                                    <button className="btn btn-sm btn-ghost flex-1" onClick={() => handleDeleteAccount(account.id)}>Supprimer</button>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                <>
+                <dialog id="topup_modal" className="modal">
+                    <div className="modal-box">
+                        <form method="dialog">
+                            <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onClick={closeTopUpModal}>✕</button>
+                        </form>
+                        <h3 className="font-bold text-lg">Recharger « {topUpAccountState?.name} »</h3>
+                        {topUpAccountState && (
+                            <p className="py-4">
+                                Solde actuel : <span className="font-bold">{topUpAccountState.balance.toLocaleString("fr-FR")} {topUpAccountState.currency}</span>
+                            </p>
+                        )}
+                        <div className='w-full flex flex-col'>
+                            <input type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)} placeholder='Montant à ajouter' className='w-full input input-bordered mb-3' required />
+                            <button className='btn btn-primary mt-3' onClick={handleTopUp}>Recharger</button>
+                        </div>
+                    </div>
+                </dialog>
+
+                <ul className='grid md:grid-cols-3 gap-5 mt-5'>
+                    {accounts.map((account) => (
+                        <li key={account.id} className="flex flex-col gap-2">
+                            <AccountItem account={account} enableHover={0} />
+                            <div className="flex gap-2">
+                                <button className="btn btn-sm btn-accent flex-1" onClick={() => openTopUpModal(account)}>Recharger</button>
+                                <button className="btn btn-sm btn-outline flex-1" onClick={() => openEditModal(account)}>Modifier</button>
+                                <button className="btn btn-sm btn-ghost flex-1" onClick={() => handleDeleteAccount(account.id)}>Supprimer</button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+                </>
                 )}
                 </>
                 )}
-
             </Wrapper>
         </div>
     )

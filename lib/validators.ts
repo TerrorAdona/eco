@@ -113,6 +113,11 @@ export const accountUpdateSchema = accountInputSchema.extend({
     accountId: z.string().min(1, "Compte non trouvé"),
 });
 
+export const topUpSchema = z.object({
+    accountId: z.string().min(1, "Compte non trouvé"),
+    amount: positiveAmount("Montant invalide"),
+});
+
 export const transferBaseSchema = z.object({
     sourceAccountId: z.string().min(1, "Compte source requis"),
     destAccountId: z.string().min(1, "Compte destination requis"),

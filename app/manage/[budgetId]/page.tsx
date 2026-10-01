@@ -3,7 +3,7 @@ import { addTransactionToBudget, deleteBudget, deleteTransaction, getAccounts, g
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
 import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeRecurringType, normalizeTransactionCategory, RECURRING_TYPE_LABELS, RECURRING_TYPES, TRANSACTION_CATEGORIES, Transaction } from '@/type'
-import { formatMoney } from '@/lib/money'
+import { formatMoney, suggestSufficientAccounts } from '@/lib/money'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 import { useEffect, useState } from 'react'
@@ -20,7 +20,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [category, setCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
     const [transactionType, setTransactionType] = useState<string>("DEPENSE")
     const [transactionAccountId, setTransactionAccountId] = useState<string>("none")
-    const [accountOptions, setAccountOptions] = useState<{ id: string; name: string }[]>([])
+    const [accountOptions, setAccountOptions] = useState<{ id: string; name: string; balance: number; currency: string }[]>([])
     const [notification, setNotification] = useState<string>("")
     const [showEditBudget, setShowEditBudget] = useState<boolean>(false)
     const [editName, setEditName] = useState<string>('')
@@ -39,7 +39,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 const budgetData = await getTransactionByBudgetId(id, email)
                 setBudget(budgetData)
                 const accounts = await getAccounts(email)
-                setAccountOptions(accounts.map((a) => ({ id: a.id, name: a.name })))
+                setAccountOptions(accounts.map((a) => ({ id: a.id, name: a.name, balance: a.balance, currency: a.currency })))
             }
         } catch (error) {
             console.error('Erreur lors de la récupération du budget:', error)
@@ -322,9 +322,33 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                     >
                                         <option value="none">Sans compte associé</option>
                                         {accountOptions.map((a) => (
-                                            <option key={a.id} value={a.id}>{a.name}</option>
+                                            <option key={a.id} value={a.id}>{a.name} ({formatMoney(a.balance, a.currency)})</option>
                                         ))}
                                     </select>
+
+                                    {(() => {
+                                        const amountNumber = parseFloat(amount)
+                                        if (transactionType !== "DEPENSE" || isNaN(amountNumber) || amountNumber <= 0 || transactionAccountId === "none") return null
+                                        const selected = accountOptions.find((a) => a.id === transactionAccountId)
+                                        if (!selected || selected.balance >= amountNumber) return null
+                                        const alternatives = suggestSufficientAccounts(accountOptions.filter((a) => a.currency === selected.currency), amountNumber, selected.id)
+                                        return (
+                                            <div className="alert alert-warning text-sm">
+                                                <span>Solde insuffisant sur « {selected.name} ».</span>
+                                                {alternatives.length > 0 ? (
+                                                    <span className="flex flex-wrap gap-1">
+                                                        {alternatives.slice(0, 3).map((a) => (
+                                                            <button key={a.id} className="btn btn-xs btn-outline" onClick={() => setTransactionAccountId(a.id)}>
+                                                                {a.name}
+                                                            </button>
+                                                        ))}
+                                                    </span>
+                                                ) : (
+                                                    <span>Aucun autre compte solvable.</span>
+                                                )}
+                                            </div>
+                                        )
+                                    })()}
 
                                     <button
                                         onClick={handleSubmitTransaction}

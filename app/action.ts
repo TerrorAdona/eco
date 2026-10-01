@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { normalizeRecurringType, normalizeTransactionCategory } from "@/type"
-import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
+import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, topUpSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -571,6 +571,20 @@ export async function updateAccount(email: string, accountId: string, name: stri
         });
     } catch (error) {
         console.error("Erreur lors de la modification du compte : ", error);
+        throw error;
+    }
+}
+
+export async function topUpAccount(email: string, accountId: string, amount: number) {
+    try {
+        await assertAccountOwner(accountId, email);
+        const input = parseOrThrow(topUpSchema, { accountId, amount });
+        await prisma.account.update({
+            where: { id: accountId },
+            data: { balance: { increment: input.amount } }
+        });
+    } catch (error) {
+        console.error("Erreur lors du rechargement du compte : ", error);
         throw error;
     }
 }
