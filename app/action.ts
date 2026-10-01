@@ -129,7 +129,7 @@ export async function getTransactionByBudgetId(budgetId: string, email: string) 
 async function resolveTransactionAccount(email: string, accountId?: string | null) {
     if (!accountId || accountId === "none") return null
     const { account } = await assertAccountOwner(accountId, email)
-    return account.id
+    return account
 }
 
 function balanceEffect(type: string | null | undefined, amount: number): number {
@@ -148,7 +148,7 @@ export async function addTransactionToBudget(
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
         const input = parseOrThrow(transactionInputSchema, { description, amount, type, category })
-        const resolvedAccountId = await resolveTransactionAccount(email, accountId)
+        const resolvedAccount = await resolveTransactionAccount(email, accountId)
 
         const totalTransactions = budget.transactions.reduce((acc, t) => {
             return acc + t.amount
@@ -159,6 +159,9 @@ export async function addTransactionToBudget(
             throw new Error("Le budget est depassé")
         }
 
+        if (resolvedAccount && input.type === "DEPENSE" && input.amount > resolvedAccount.balance) {
+            throw new Error("Solde insuffisant sur ce compte")
+        }
 
         await prisma.$transaction(async (tx) => {
             await tx.transaction.create({
@@ -172,12 +175,12 @@ export async function addTransactionToBudget(
                             id: budgetId
                         }
                     },
-                    ...(resolvedAccountId ? { account: { connect: { id: resolvedAccountId } } } : {})
+                    ...(resolvedAccount ? { account: { connect: { id: resolvedAccount.id } } } : {})
                 }
             })
-            if (resolvedAccountId) {
+            if (resolvedAccount) {
                 await tx.account.update({
-                    where: { id: resolvedAccountId },
+                    where: { id: resolvedAccount.id },
                     data: { balance: { increment: balanceEffect(input.type, input.amount) } }
                 })
             }
@@ -200,7 +203,11 @@ export async function updateTransaction(
     try {
         const { budget, transaction } = await assertTransactionOwner(transactionId, email)
         const input = parseOrThrow(transactionUpdateSchema, { transactionId, description, amount, type, category })
-        const resolvedAccountId = accountId === undefined ? transaction.accountId : await resolveTransactionAccount(email, accountId)
+        const newType = type === undefined ? transaction.type : input.type
+        const newAccount = accountId === undefined
+            ? (transaction.accountId ? await prisma.account.findUnique({ where: { id: transaction.accountId } }) : null)
+            : await resolveTransactionAccount(email, accountId)
+        const newAccountId = newAccount?.id ?? null
 
         const totalWithoutCurrent = budget.transactions.reduce((acc, t) => {
             return t.id === transactionId ? acc : acc + t.amount
@@ -210,7 +217,13 @@ export async function updateTransaction(
         }
 
         const oldEffect = balanceEffect(transaction.type, transaction.amount)
-        const newEffect = balanceEffect(type === undefined ? transaction.type : input.type, input.amount)
+        const newEffect = balanceEffect(newType, input.amount)
+        if (newType === "DEPENSE" && newAccount) {
+            const available = newAccount.balance - (transaction.accountId === newAccount.id ? oldEffect : 0)
+            if (input.amount > available) {
+                throw new Error("Solde insuffisant sur ce compte")
+            }
+        }
 
         await prisma.$transaction(async (tx) => {
             await tx.transaction.update({
@@ -218,16 +231,16 @@ export async function updateTransaction(
                 data: {
                     description: input.description,
                     amount: input.amount,
-                    type: type === undefined ? transaction.type : input.type,
+                    type: newType,
                     category: category === undefined ? transaction.category : input.category,
-                    accountId: resolvedAccountId
+                    accountId: newAccountId
                 }
             })
-            if (transaction.accountId && resolvedAccountId && transaction.accountId === resolvedAccountId) {
+            if (transaction.accountId && newAccountId && transaction.accountId === newAccountId) {
                 const delta = newEffect - oldEffect
                 if (delta !== 0) {
                     await tx.account.update({
-                        where: { id: resolvedAccountId },
+                        where: { id: newAccountId },
                         data: { balance: { increment: delta } }
                     })
                 }
@@ -238,9 +251,9 @@ export async function updateTransaction(
                         data: { balance: { increment: -oldEffect } }
                     })
                 }
-                if (resolvedAccountId) {
+                if (newAccountId) {
                     await tx.account.update({
-                        where: { id: resolvedAccountId },
+                        where: { id: newAccountId },
                         data: { balance: { increment: newEffect } }
                     })
                 }
