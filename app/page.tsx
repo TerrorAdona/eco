@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import budgets from "@/components/data";
 import BudgetItem from "@/components/BudgetItem";
 import { TRANSACTION_CATEGORIES } from "@/type";
+import AuthButtons from "@/components/AuthButtons";
 import {
   ArrowLeftRight,
   Bell,
@@ -71,23 +72,16 @@ export default function Home() {
 
       <section className="px-5 md:px-[10%] py-14 md:py-20 grid lg:grid-cols-2 gap-10 items-center">
         <div className="flex flex-col items-start">
-          <span className="badge badge-primary badge-lg mb-4">Gestion financière personnelle</span>
+          {/* <span className="badge badge-primary badge-lg mb-4">Gestion financière personnelle</span> */}
           <h1 className="text-4xl md:text-6xl font-bold leading-tight">
             Gérez efficacement <br />
             <span className="text-primary">vos dépenses.</span>
           </h1>
           <p className="py-6 text-base-content/70 text-lg">
-            eco centralise budgets, transactions, comptes, épargne et alertes
+            ECO centralise budgets, transactions, comptes, épargne et alertes
             pour une meilleure gestion de vos finances au quotidien.
           </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href={"/sign-up"} className="btn btn-md md:btn-lg btn-accent">
-              Créer un compte
-            </Link>
-            <Link href={"/sign-in"} className="btn btn-md md:btn-lg btn-outline btn-accent">
-              Se connecter
-            </Link>
-          </div>
+          <AuthButtons />
           <div className="flex flex-wrap gap-2 mt-8">
             {TRANSACTION_CATEGORIES.slice(0, 6).map((c) => (
               <span key={c} className="badge badge-outline">
