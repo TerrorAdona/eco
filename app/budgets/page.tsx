@@ -3,7 +3,7 @@
 import Wrapper from '@/components/Wrapper'
 import { useUser } from '@clerk/nextjs'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert } from '@/lib/budget-alerts'
+import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert, sumExpenses } from '@/lib/budget-alerts'
 import { addBudget, deleteBudget, getBudgetsByUser, updateBudget } from '../action'
 import Notification from '@/components/Notification'
 import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeTransactionCategory, TRANSACTION_CATEGORIES } from '@/type'
@@ -77,7 +77,7 @@ const Page = () => {
     const budgetAlerts = useMemo(() => {
         return budgets
             .map((budget) => {
-                const spent = (budget.transactions ?? []).reduce((acc, t) => acc + t.amount, 0)
+                const spent = sumExpenses(budget.transactions ?? [])
                 const alert = getBudgetAlert(spent, budget.amount)
                 return { budget, alert }
             })

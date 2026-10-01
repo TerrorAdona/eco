@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { normalizeRecurringType, normalizeTransactionCategory } from "@/type"
+import { sumExpenses } from "@/lib/budget-alerts"
 import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, topUpSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
 
 async function getUserOrThrow(email: string) {
@@ -82,7 +83,7 @@ export async function updateBudget(email: string, budgetId: string, name: string
     try {
         const { budget } = await assertBudgetOwner(budgetId, email)
         const input = parseOrThrow(budgetUpdateSchema, { budgetId, name, amount, category })
-        const totalSpent = budget.transactions.reduce((acc, t) => acc + t.amount, 0)
+        const totalSpent = sumExpenses(budget.transactions)
         if (input.amount < totalSpent) throw new Error("Le nouveau montant est inférieur aux dépenses déjà enregistrées")
         const newCategory = category === undefined ? budget.category : input.category
         await prisma.$transaction(async (tx) => {
@@ -159,13 +160,13 @@ export async function addTransactionToBudget(
         const input = parseOrThrow(transactionInputSchema, { description, amount, type, category })
         const resolvedAccount = await resolveTransactionAccount(email, accountId)
 
-        const totalTransactions = budget.transactions.reduce((acc, t) => {
-            return acc + t.amount
-        }, 0)
+        if (input.type === "DEPENSE") {
+            const totalExpenses = sumExpenses(budget.transactions)
 
-        const totalWithNewTransaction = totalTransactions + input.amount;
-        if (totalWithNewTransaction > budget.amount) {
-            throw new Error("Le budget est depassé")
+            const totalWithNewTransaction = totalExpenses + input.amount;
+            if (totalWithNewTransaction > budget.amount) {
+                throw new Error("Le budget est depassé")
+            }
         }
 
         if (resolvedAccount && input.type === "DEPENSE" && input.amount > resolvedAccount.balance) {
@@ -218,11 +219,11 @@ export async function updateTransaction(
             : await resolveTransactionAccount(email, accountId)
         const newAccountId = newAccount?.id ?? null
 
-        const totalWithoutCurrent = budget.transactions.reduce((acc, t) => {
-            return t.id === transactionId ? acc : acc + t.amount
-        }, 0)
-        if (totalWithoutCurrent + input.amount > budget.amount) {
-            throw new Error("Le budget est depassé")
+        if (newType === "DEPENSE") {
+            const totalWithoutCurrent = sumExpenses(budget.transactions.filter((t) => t.id !== transactionId))
+            if (totalWithoutCurrent + input.amount > budget.amount) {
+                throw new Error("Le budget est depassé")
+            }
         }
 
         const oldEffect = balanceEffect(transaction.type, transaction.amount)

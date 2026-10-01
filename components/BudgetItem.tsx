@@ -1,4 +1,5 @@
 import { Budget, normalizeTransactionCategory } from "@/type"
+import { sumExpenses, sumIncome } from "@/lib/budget-alerts"
 import CategoryIcon from "./CategoryIcon"
 import React from "react"
 
@@ -12,7 +13,13 @@ const BudgetItem: React.FC<BudgetItemProps> = ({ budget, enableHover }) => {
     const transactionCount = budget.transactions ? budget.transactions.length : 0;
     const totalTransactionAmount = budget.transactions
         ?
-        budget.transactions.reduce((total, tx) => total + tx.amount, 0)
+        sumExpenses(budget.transactions)
+        :
+        0;
+
+    const totalIncomeAmount = budget.transactions
+        ?
+        sumIncome(budget.transactions)
         :
         0;
 
@@ -57,6 +64,9 @@ const BudgetItem: React.FC<BudgetItemProps> = ({ budget, enableHover }) => {
                     <p className="text-xs text-base-content/60">restant</p>
                 </div>
             </div>
+            {totalIncomeAmount > 0 && (
+                <p className="mt-1 text-xs font-medium text-success">+{totalIncomeAmount.toLocaleString("fr-FR")} Ar de revenus sur ce budget</p>
+            )}
 
             <div className="w-full bg-base-300 rounded-full h-2.5 mt-3">
                 <div

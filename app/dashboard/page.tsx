@@ -7,7 +7,7 @@ import SavingsGoalItem from '@/components/SavingsGoalItem'
 import TransactionItem from '@/components/TransactionItem'
 import { getDashboardData, getSavingsGoalsByUser } from '../action'
 import { normalizeTransactionCategory, SavingsGoal, Transaction } from '@/type'
-import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert } from '@/lib/budget-alerts'
+import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert, isExpense, sumExpenses, sumIncome } from '@/lib/budget-alerts'
 import { comparePeriods, detectUnusualSpending } from '@/lib/analytics'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
@@ -77,24 +77,26 @@ const Page = () => {
                 budgetId: budget.id,
             }))
         )
-        const totalSpentAllTime = allTransactions.reduce((acc, t) => acc + t.amount, 0)
+        const totalSpentAllTime = sumExpenses(allTransactions)
         const periodTransactions = allTransactions
             .filter((t) => t.createdAt >= dateLimit)
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        const totalSpentPeriod = periodTransactions.reduce((acc, t) => acc + t.amount, 0)
+        const periodExpenses = periodTransactions.filter(isExpense)
+        const totalSpentPeriod = sumExpenses(periodTransactions)
+        const totalIncomePeriod = sumIncome(periodTransactions)
         const previousLimit = new Date(dateLimit)
         previousLimit.setDate(dateLimit.getDate() - config.days)
         const previousTransactions = allTransactions.filter((t) => t.createdAt >= previousLimit && t.createdAt < dateLimit)
         const comparison = comparePeriods(
             totalSpentPeriod,
-            previousTransactions.reduce((acc, t) => acc + t.amount, 0),
-            periodTransactions.length,
-            previousTransactions.length
+            sumExpenses(previousTransactions),
+            periodExpenses.length,
+            previousTransactions.filter(isExpense).length
         )
-        const unusual = detectUnusualSpending(periodTransactions)
+        const unusual = detectUnusualSpending(periodExpenses)
 
         const byCategory = new Map<string, number>()
-        for (const t of periodTransactions) {
+        for (const t of periodExpenses) {
             const category = normalizeTransactionCategory(t.category)
             byCategory.set(category, (byCategory.get(category) ?? 0) + t.amount)
         }
@@ -115,7 +117,7 @@ const Page = () => {
                 }
             }
         )
-        for (const t of periodTransactions) {
+        for (const t of periodExpenses) {
             const diffDays = Math.floor((now.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60 * 24))
             const index = bucketCount - 1 - Math.floor(diffDays / config.bucketDays)
             if (index >= 0 && index < bucketCount) buckets[index].total += t.amount
@@ -127,7 +129,7 @@ const Page = () => {
         const goalPercentage = totalGoalTarget > 0 ? Math.round((totalGoalSaved / totalGoalTarget) * 100) : 0
         const alerts = budgets
             .map((budget) => {
-                const spent = budget.transactions.reduce((acc, t) => acc + t.amount, 0)
+                const spent = sumExpenses(budget.transactions)
                 return { budget, alert: getBudgetAlert(spent, budget.amount) }
             })
             .filter(hasBudgetAlert)
@@ -138,7 +140,7 @@ const Page = () => {
             totalSpentPeriod,
             remaining: Math.max(0, totalBudgets - totalSpentAllTime),
             globalPercentage: totalBudgets > 0 ? Math.round((totalSpentAllTime / totalBudgets) * 100) : 0,
-            transactionCount: periodTransactions.length,
+            transactionCount: periodExpenses.length,
             recent: periodTransactions.slice(0, 5),
             categories,
             buckets,
@@ -151,6 +153,7 @@ const Page = () => {
             alerts,
             comparison,
             unusual,
+            totalIncomePeriod,
         }
     }, [budgets, goals, period])
 
@@ -196,7 +199,12 @@ const Page = () => {
                         <div className="stat">
                             <div className="stat-title">Dépensé ({stats.periodLabel})</div>
                             <div className="stat-value text-2xl text-secondary">{formatAmount(stats.totalSpentPeriod)}</div>
-                            <div className="stat-desc">{stats.transactionCount} transaction{stats.transactionCount > 1 ? "s" : ""}</div>
+                            <div className="stat-desc">{stats.transactionCount} dépense{stats.transactionCount > 1 ? "s" : ""}</div>
+                        </div>
+                        <div className="stat">
+                            <div className="stat-title">Revenus ({stats.periodLabel})</div>
+                            <div className="stat-value text-2xl text-success">{formatAmount(stats.totalIncomePeriod)}</div>
+                            <div className="stat-desc">non comptés en dépenses</div>
                         </div>
                         <div className="stat">
                             <div className="stat-title">Restant</div>
@@ -367,13 +375,13 @@ const Page = () => {
                                             style={{ width: `${stats.goalPercentage}%` }}
                                         ></div>
                                     </div>
-                                    <ul className="grid md:grid-cols-2 gap-5">
-                                        {stats.topGoals.map((goal) => (
-                                            <Link href="/objectifs" key={goal.id}>
-                                                <SavingsGoalItem goal={goal} enableHover={1} />
-                                            </Link>
-                                        ))}
-                                    </ul>
+                                <ul className="grid grid-cols-1 gap-5">
+                                    {stats.topGoals.map((goal) => (
+                                        <Link href="/objectifs" key={goal.id}>
+                                            <SavingsGoalItem goal={goal} enableHover={1} />
+                                        </Link>
+                                    ))}
+                                </ul>
                                 </>
                             )}
                         </div>

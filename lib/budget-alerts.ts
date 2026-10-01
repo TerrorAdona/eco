@@ -34,3 +34,17 @@ export const BUDGET_ALERT_LABELS: Record<Exclude<BudgetAlertLevel, "ok">, string
 export function hasBudgetAlert<B>(entry: { budget: B; alert: BudgetAlert }): entry is { budget: B; alert: BudgetAlert & { level: Exclude<BudgetAlertLevel, "ok"> } } {
     return entry.alert.level !== "ok";
 }
+
+export function isExpense<T extends { type?: string | null }>(t: T): boolean {
+    return (t.type ?? "DEPENSE") !== "REVENU";
+}
+
+/** Somme des dépenses uniquement (revenus exclus). */
+export function sumExpenses<T extends { amount: number; type?: string | null }>(transactions: T[]): number {
+    return transactions.filter(isExpense).reduce((acc, t) => acc + t.amount, 0);
+}
+
+/** Somme des revenus uniquement. */
+export function sumIncome<T extends { amount: number; type?: string | null }>(transactions: T[]): number {
+    return transactions.filter((t) => !isExpense(t)).reduce((acc, t) => acc + t.amount, 0);
+}
