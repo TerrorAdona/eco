@@ -84,12 +84,21 @@ export async function updateBudget(email: string, budgetId: string, name: string
         const input = parseOrThrow(budgetUpdateSchema, { budgetId, name, amount, category })
         const totalSpent = budget.transactions.reduce((acc, t) => acc + t.amount, 0)
         if (input.amount < totalSpent) throw new Error("Le nouveau montant est inférieur aux dépenses déjà enregistrées")
-        await prisma.budget.update({
-            where: { id: budgetId },
-            data: {
-                name: input.name,
-                amount: input.amount,
-                category: category === undefined ? budget.category : input.category
+        const newCategory = category === undefined ? budget.category : input.category
+        await prisma.$transaction(async (tx) => {
+            await tx.budget.update({
+                where: { id: budgetId },
+                data: {
+                    name: input.name,
+                    amount: input.amount,
+                    category: newCategory
+                }
+            })
+            if (newCategory !== budget.category) {
+                await tx.transaction.updateMany({
+                    where: { budgetId: budgetId },
+                    data: { category: newCategory }
+                })
             }
         })
     } catch (error) {
@@ -169,7 +178,7 @@ export async function addTransactionToBudget(
                     amount: input.amount,
                     description: input.description,
                     type: input.type,
-                    category: input.category,
+                    category: budget.category,
                     budget: {
                         connect: {
                             id: budgetId
@@ -232,7 +241,7 @@ export async function updateTransaction(
                     description: input.description,
                     amount: input.amount,
                     type: newType,
-                    category: category === undefined ? transaction.category : input.category,
+                    category: budget.category,
                     accountId: newAccountId
                 }
             })

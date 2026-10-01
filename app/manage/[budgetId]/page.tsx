@@ -17,7 +17,6 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [budget, setBudget] = useState<Budget>()
     const [description, setDescription] = useState<string>('')
     const [amount, setAmount] = useState<string>('')
-    const [category, setCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
     const [transactionType, setTransactionType] = useState<string>("DEPENSE")
     const [transactionAccountId, setTransactionAccountId] = useState<string>("none")
     const [accountOptions, setAccountOptions] = useState<{ id: string; name: string; balance: number; currency: string }[]>([])
@@ -61,7 +60,6 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const resetTransactionForm = () => {
         setAmount("")
         setDescription("")
-        setCategory(DEFAULT_TRANSACTION_CATEGORY)
         setTransactionType("DEPENSE")
         setTransactionAccountId("none")
         setEditingTransactionId(null)
@@ -70,7 +68,6 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const openEditTransaction = (transaction: Transaction) => {
         setDescription(transaction.description)
         setAmount(String(transaction.amount))
-        setCategory(normalizeTransactionCategory(transaction.category))
         setTransactionType(normalizeRecurringType(transaction.type))
         setTransactionAccountId(transaction.accountId ?? "none")
         setEditingTransactionId(transaction.id)
@@ -94,10 +91,10 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 return
             }
             if (editingTransactionId) {
-                await updateTransaction(editingTransactionId, email, description, amountNumber, category, transactionAccountId, transactionType)
+                await updateTransaction(editingTransactionId, email, description, amountNumber, undefined, transactionAccountId, transactionType)
                 setNotification("Transaction modifiée avec succès")
             } else {
-                await addTransactionToBudget(budgetId!, amountNumber, description, email, category, transactionAccountId, transactionType)
+                await addTransactionToBudget(budgetId!, amountNumber, description, email, undefined, transactionAccountId, transactionType)
                 setNotification("Transaction ajoutée avec succès")
             }
             fetchBudgetData(budgetId!, email)
@@ -288,30 +285,20 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                         className="input input-bordered w-full"
                                     />
 
-                                    <div className="flex gap-2">
-                                        <select
-                                            id="tx-type"
-                                            value={transactionType}
-                                            onChange={(e) => setTransactionType(e.target.value)}
-                                            className="select select-bordered flex-1"
-                                            aria-label="Type de transaction"
-                                        >
-                                            {RECURRING_TYPES.map((t) => (
-                                                <option key={t} value={t}>{RECURRING_TYPE_LABELS[t]}</option>
-                                            ))}
-                                        </select>
-                                        <select
-                                            id="category"
-                                            value={category}
-                                            onChange={(e) => setCategory(e.target.value)}
-                                            className="select select-bordered flex-1"
-                                            aria-label="Catégorie de la transaction"
-                                        >
-                                            {TRANSACTION_CATEGORIES.map((c) => (
-                                                <option key={c} value={c}>{c}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    <select
+                                        id="tx-type"
+                                        value={transactionType}
+                                        onChange={(e) => setTransactionType(e.target.value)}
+                                        className="select select-bordered w-full"
+                                        aria-label="Type de transaction"
+                                    >
+                                        {RECURRING_TYPES.map((t) => (
+                                            <option key={t} value={t}>{RECURRING_TYPE_LABELS[t]}</option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-base-content/50">
+                                        La catégorie « {budget ? normalizeTransactionCategory(budget.category) : "..."} » du budget sera appliquée.
+                                    </p>
 
                                     <select
                                         id="account"
