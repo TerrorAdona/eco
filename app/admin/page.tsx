@@ -1,5 +1,6 @@
 import Wrapper from '@/components/Wrapper'
 import { getAdminStats } from '@/app/action'
+import Link from 'next/link'
 
 const formatCount = (value: number) => value.toLocaleString("fr-FR");
 
@@ -47,8 +48,13 @@ export default async function AdminPage() {
 
     return (
         <Wrapper>
-            <h1 className="text-2xl font-bold">Administration</h1>
-            <p className="text-sm text-base-content/50 mt-1 mb-5">Vue globale de l&apos;activité de l&apos;application</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                <div>
+                    <h1 className="text-2xl font-bold">Administration</h1>
+                    <p className="text-sm text-base-content/50 mt-1">Vue globale de l&apos;activité de l&apos;application</p>
+                </div>
+                <Link href="/admin/users" className="btn btn-primary btn-sm">Gérer les utilisateurs</Link>
+            </div>
 
             <ul className="grid grid-cols-2 lg:grid-cols-3 gap-5">
                 {cards.map((card) => (

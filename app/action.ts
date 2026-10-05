@@ -1,11 +1,11 @@
 'use server'
 
 import prisma from "@/lib/prisma"
-import { normalizeRecurringType, normalizeTransactionCategory, normalizeUserRole } from "@/type"
+import { normalizeRecurringType, normalizeTransactionCategory, normalizeUserRole, USER_ROLES } from "@/type"
 import { sumExpenses } from "@/lib/budget-alerts"
 import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, topUpSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
 import { bucketByMonth } from "@/lib/admin-stats"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -13,6 +13,7 @@ async function getUserOrThrow(email: string) {
         where: { email }
     })
     if (!user) throw new Error("Utilisateur non trouvé")
+    if (!user.isActive) throw new Error("Compte désactivé")
     return user
 }
 
@@ -89,6 +90,164 @@ export async function getAdminStats() {
         };
     } catch (error) {
         console.error("Erreur lors de la récupération des statistiques : ", error);
+        throw error;
+    }
+}
+
+async function assertNotLastAdmin(targetUserId: string) {
+    const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!target || normalizeUserRole(target.role) !== "ADMIN") return;
+    const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (adminCount <= 1) throw new Error("Impossible : dernier administrateur");
+}
+
+async function findClerkUserIdByEmail(email: string): Promise<string | null> {
+    try {
+        const client = await clerkClient();
+        const list = await client.users.getUserList({ emailAddress: [email] });
+        return list.data[0]?.id ?? null;
+    } catch (error) {
+        console.error("Erreur lors de la recherche Clerk : ", error);
+        return null;
+    }
+}
+
+export async function getAdminUsers(search?: string, page?: number) {
+    try {
+        const email = await getAdminEmail();
+        await assertAdmin(email);
+        const query = search?.trim() ?? "";
+        const pageSize = 10;
+        const pageNumber = page && Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1;
+        const where = query ? { email: { contains: query } } : {};
+        const [total, users] = await Promise.all([
+            prisma.user.count({ where }),
+            prisma.user.findMany({
+                where,
+                select: { id: true, email: true, role: true, isActive: true, createdAt: true },
+                orderBy: { createdAt: "desc" },
+                skip: (pageNumber - 1) * pageSize,
+                take: pageSize,
+            }),
+        ]);
+        return {
+            users: users.map((u) => ({ ...u, role: normalizeUserRole(u.role) })),
+            total,
+            page: pageNumber,
+            pageSize,
+            totalPages: Math.max(1, Math.ceil(total / pageSize)),
+        };
+    } catch (error) {
+        console.error("Erreur lors de la récupération des utilisateurs : ", error);
+        throw error;
+    }
+}
+
+export async function getAdminUserDetail(userId: string) {
+    try {
+        const email = await getAdminEmail();
+        await assertAdmin(email);
+        if (!userId) throw new Error("Utilisateur non trouvé");
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                isActive: true,
+                createdAt: true,
+                _count: { select: { budgets: true, accounts: true } },
+            },
+        });
+        if (!user) throw new Error("Utilisateur non trouvé");
+        const transactionCount = await prisma.transaction.count({
+            where: { budget: { userId: user.id } },
+        });
+        return {
+            id: user.id,
+            email: user.email,
+            role: normalizeUserRole(user.role),
+            isActive: user.isActive,
+            createdAt: user.createdAt,
+            budgetCount: user._count.budgets,
+            accountCount: user._count.accounts,
+            transactionCount,
+        };
+    } catch (error) {
+        console.error("Erreur lors de la récupération de l'utilisateur : ", error);
+        throw error;
+    }
+}
+
+export async function setUserRole(targetUserId: string, role: string) {
+    try {
+        const email = await getAdminEmail();
+        await assertAdmin(email);
+        if (!(USER_ROLES as readonly string[]).includes(role)) throw new Error("Rôle invalide");
+        const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+        if (!target) throw new Error("Utilisateur non trouvé");
+        if (normalizeUserRole(target.role) === "ADMIN" && role !== "ADMIN") {
+            await assertNotLastAdmin(targetUserId);
+        }
+        await prisma.user.update({
+            where: { id: targetUserId },
+            data: { role },
+        });
+    } catch (error) {
+        console.error("Erreur lors de la modification du rôle : ", error);
+        throw error;
+    }
+}
+
+export async function setUserActive(targetUserId: string, isActive: boolean) {
+    try {
+        const email = await getAdminEmail();
+        const sessionUser = await assertAdmin(email);
+        if (typeof isActive !== "boolean") throw new Error("Statut invalide");
+        const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+        if (!target) throw new Error("Utilisateur non trouvé");
+        if (target.id === sessionUser.id && !isActive) {
+            throw new Error("Vous ne pouvez pas désactiver votre propre compte");
+        }
+        if (!isActive && normalizeUserRole(target.role) === "ADMIN") {
+            await assertNotLastAdmin(targetUserId);
+        }
+        const clerkUserId = await findClerkUserIdByEmail(target.email);
+        if (clerkUserId) {
+            try {
+                const client = await clerkClient();
+                if (isActive) {
+                    await client.users.unbanUser(clerkUserId);
+                } else {
+                    await client.users.banUser(clerkUserId);
+                }
+            } catch (error) {
+                console.error("Erreur Clerk lors du changement de statut : ", error);
+                throw new Error("Échec de la synchronisation Clerk");
+            }
+        }
+        try {
+            await prisma.user.update({
+                where: { id: targetUserId },
+                data: { isActive },
+            });
+        } catch (error) {
+            if (clerkUserId) {
+                try {
+                    const client = await clerkClient();
+                    if (isActive) {
+                        await client.users.banUser(clerkUserId);
+                    } else {
+                        await client.users.unbanUser(clerkUserId);
+                    }
+                } catch (rollbackError) {
+                    console.error("Échec du rollback Clerk : ", rollbackError);
+                }
+            }
+            throw error;
+        }
+    } catch (error) {
+        console.error("Erreur lors du changement de statut : ", error);
         throw error;
     }
 }
@@ -841,10 +1000,10 @@ export async function deleteTransfer(transferId: string, email: string) {
 
 export async function getDashboardData(email: string) {
     try {
-        if (!email) throw new Error("Utilisateur non trouvé")
+        const user = await getUserOrThrow(email)
         const budgets = await prisma.budget.findMany({
             where: {
-                user: { email: email }
+                userId: user.id
             },
             include: {
                 transactions: {
