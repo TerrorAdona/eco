@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { normalizeRecurringType, normalizeTransactionCategory, normalizeUserRole, USER_ROLES } from "@/type"
 import { sumExpenses } from "@/lib/budget-alerts"
 import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, topUpSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
-import { bucketByMonth } from "@/lib/admin-stats"
+import { ADMIN_PERIODS, AdminPeriod, bucketByMonth, bucketByTime } from "@/lib/admin-stats"
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server"
 
 async function getUserOrThrow(email: string) {
@@ -139,6 +139,112 @@ export async function getAdminUsers(search?: string, page?: number) {
         };
     } catch (error) {
         console.error("Erreur lors de la récupération des utilisateurs : ", error);
+        throw error;
+    }
+}
+
+export async function getAdminStatistics(period?: string) {
+    try {
+        const email = await getAdminEmail();
+        await assertAdmin(email);
+        const config = (period && period in ADMIN_PERIODS
+            ? ADMIN_PERIODS[period as AdminPeriod]
+            : ADMIN_PERIODS.last30);
+        const since = new Date();
+        since.setDate(since.getDate() - config.days);
+        const inPeriod = { createdAt: { gte: since } };
+        const [
+            userTotal, userActive, userInactive, adminCount, userRoleCount,
+            accountTotal, budgetTotal, goalTotal, recurringTotal,
+            incomeCount, expenseCount, transferCount,
+            accountTypes, accountCurrencies,
+            userDates, transactionRows, transferDates, accountDates, budgetDates, goalRows,
+        ] = await Promise.all([
+            prisma.user.count(),
+            prisma.user.count({ where: { isActive: true } }),
+            prisma.user.count({ where: { isActive: false } }),
+            prisma.user.count({ where: { role: "ADMIN" } }),
+            prisma.user.count({ where: { role: "USER" } }),
+            prisma.account.count(),
+            prisma.budget.count(),
+            prisma.savingsGoal.count(),
+            prisma.recurringTransaction.count(),
+            prisma.transaction.count({ where: { type: "REVENU" } }),
+            prisma.transaction.count({ where: { NOT: { type: "REVENU" } } }),
+            prisma.transfer.count(),
+            prisma.account.groupBy({ by: ["type"], _count: { _all: true } }),
+            prisma.account.groupBy({ by: ["currency"], _count: { _all: true } }),
+            prisma.user.findMany({ select: { createdAt: true }, where: inPeriod }),
+            prisma.transaction.findMany({ select: { createdAt: true, type: true }, where: inPeriod }),
+            prisma.transfer.findMany({ select: { createdAt: true }, where: inPeriod }),
+            prisma.account.findMany({ select: { createdAt: true }, where: inPeriod }),
+            prisma.budget.findMany({ select: { createdAt: true }, where: inPeriod }),
+            prisma.savingsGoal.findMany({ select: { savedAmount: true, targetAmount: true, createdAt: true }, where: inPeriod }),
+        ]);
+        const txItems = transactionRows.map((t) => ({
+            date: t.createdAt,
+            kind: t.type === "REVENU" ? "income" : "expense",
+        }));
+        const transferItems = transferDates.map((t) => ({ date: t.createdAt, kind: "transfer" }));
+        const withPercent = (rows: { label: string; count: number }[]) => {
+            const total = rows.reduce((acc, r) => acc + r.count, 0);
+            return rows
+                .map((r) => ({
+                    ...r,
+                    percent: total > 0 ? Math.round((r.count / total) * 100) : 0,
+                }))
+                .sort((a, b) => b.count - a.count);
+        };
+        return {
+            period,
+            users: {
+                total: userTotal,
+                active: userActive,
+                inactive: userInactive,
+                admins: adminCount,
+                standards: userRoleCount,
+                evolution: bucketByTime(userDates.map((u) => ({ date: u.createdAt, kind: "all" })), config.days, config.bucketDays),
+            },
+            activity: {
+                transactions: incomeCount + expenseCount,
+                income: incomeCount,
+                expenses: expenseCount,
+                transfers: transferCount,
+                accounts: accountTotal,
+                budgets: budgetTotal,
+                goals: goalTotal,
+            },
+            periodActivity: {
+                transactions: transactionRows.length,
+                income: txItems.filter((t) => t.kind === "income").length,
+                expenses: txItems.filter((t) => t.kind === "expense").length,
+                transfers: transferItems.length,
+                accounts: accountDates.length,
+                budgets: budgetDates.length,
+                goals: goalRows.length,
+            },
+            transactionEvolution: bucketByTime([...txItems, ...transferItems], config.days, config.bucketDays),
+            userEvolution: bucketByTime(userDates.map((u) => ({ date: u.createdAt, kind: "all" })), config.days, config.bucketDays),
+            transactionSplit: [
+                { label: "Dépenses", count: txItems.filter((t) => t.kind === "expense").length },
+                { label: "Revenus", count: txItems.filter((t) => t.kind === "income").length },
+                { label: "Transferts", count: transferItems.length },
+            ],
+            accounts: {
+                total: accountTotal,
+                byType: withPercent(accountTypes.map((r) => ({ label: r.type, count: r._count._all }))),
+                byCurrency: withPercent(accountCurrencies.map((r) => ({ label: r.currency, count: r._count._all }))),
+            },
+            budgets: { total: budgetTotal, created: budgetDates.length },
+            goals: {
+                total: goalTotal,
+                created: goalRows.length,
+                reached: goalRows.filter((g) => g.savedAmount >= g.targetAmount && g.targetAmount > 0).length,
+            },
+            recurring: { total: recurringTotal },
+        };
+    } catch (error) {
+        console.error("Erreur lors de la récupération des statistiques admin : ", error);
         throw error;
     }
 }

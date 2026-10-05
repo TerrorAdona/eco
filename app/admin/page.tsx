@@ -53,7 +53,10 @@ export default async function AdminPage() {
                     <h1 className="text-2xl font-bold">Administration</h1>
                     <p className="text-sm text-base-content/50 mt-1">Vue globale de l&apos;activité de l&apos;application</p>
                 </div>
-                <Link href="/admin/users" className="btn btn-primary btn-sm">Gérer les utilisateurs</Link>
+                <div className="flex gap-2">
+                    <Link href="/admin/statistics" className="btn btn-outline btn-sm">Statistiques</Link>
+                    <Link href="/admin/users" className="btn btn-primary btn-sm">Gérer les utilisateurs</Link>
+                </div>
             </div>
 
             <ul className="grid grid-cols-2 lg:grid-cols-3 gap-5">
