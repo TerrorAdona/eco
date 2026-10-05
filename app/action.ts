@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from "@/lib/prisma"
-import { normalizeRecurringType, normalizeTransactionCategory } from "@/type"
+import { normalizeRecurringType, normalizeTransactionCategory, normalizeUserRole } from "@/type"
 import { sumExpenses } from "@/lib/budget-alerts"
 import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, topUpSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
 
@@ -12,6 +12,12 @@ async function getUserOrThrow(email: string) {
     })
     if (!user) throw new Error("Utilisateur non trouvé")
     return user
+}
+
+export async function assertAdmin(email: string) {
+    const user = await getUserOrThrow(email);
+    if (normalizeUserRole(user.role) !== "ADMIN") throw new Error("Accès non autorisé");
+    return user;
 }
 
 async function assertBudgetOwner(budgetId: string, email: string) {
@@ -47,7 +53,8 @@ export async function checkAndAddUser(email: string | undefined) {
         if (!existingUser) {
             await prisma.user.create({
                 data: {
-                    email: email
+                    email: email,
+                    role: "USER"
                 }
             })
             console.log("Nouvel utilisateur ajouté dans la base de données")

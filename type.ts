@@ -96,6 +96,19 @@ export interface Transfer {
     createdAt: Date;
 }
 
+export const USER_ROLES = [
+    "USER",
+    "ADMIN",
+] as const;
+
+export type UserRole = typeof USER_ROLES[number];
+
+export function normalizeUserRole(value: string | null | undefined): UserRole {
+    return (USER_ROLES as readonly string[]).includes(value ?? "")
+        ? (value as UserRole)
+        : "USER";
+}
+
 export interface SavingsGoal {
     id: string;
     name: string;

@@ -15,6 +15,7 @@ datasource db {
 model User {
   id            String       @id @default(uuid())
   email         String       @unique
+  role          String       @default("USER")
   createdAt     DateTime     @default(now())
   budgets       Budget[]
   savingsGoals  SavingsGoal[]
