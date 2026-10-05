@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma"
 import { normalizeRecurringType, normalizeTransactionCategory, normalizeUserRole } from "@/type"
 import { sumExpenses } from "@/lib/budget-alerts"
 import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, topUpSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
+import { bucketByMonth } from "@/lib/admin-stats"
+import { auth, currentUser } from "@clerk/nextjs/server"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -18,6 +20,77 @@ export async function assertAdmin(email: string) {
     const user = await getUserOrThrow(email);
     if (normalizeUserRole(user.role) !== "ADMIN") throw new Error("Accès non autorisé");
     return user;
+}
+
+async function getAdminEmail(): Promise<string> {
+    let userId: string | null = null;
+    try {
+        ({ userId } = await auth());
+    } catch {
+        throw new Error("Non authentifié");
+    }
+    if (!userId) throw new Error("Non authentifié");
+    const user = await currentUser();
+    const email = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress;
+    if (!email) throw new Error("Utilisateur non trouvé");
+    return email;
+}
+
+export async function getMyRole(): Promise<string> {
+    try {
+        const email = await getAdminEmail();
+        const user = await getUserOrThrow(email);
+        return normalizeUserRole(user.role);
+    } catch (error) {
+        console.error("Erreur lors de la récupération du rôle : ", error);
+        throw error;
+    }
+}
+
+export async function getAdminStats() {
+    try {
+        const email = await getAdminEmail();
+        await assertAdmin(email);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const recentFilter = { createdAt: { gte: thirtyDaysAgo } };
+        const [
+            userCount, userRecent,
+            accountCount, accountRecent,
+            budgetCount, budgetRecent,
+            transactionCount, transactionRecent,
+            goalCount, recurringCount,
+            userDates, transactionDates, accountDates,
+        ] = await Promise.all([
+            prisma.user.count(),
+            prisma.user.count({ where: recentFilter }),
+            prisma.account.count(),
+            prisma.account.count({ where: recentFilter }),
+            prisma.budget.count(),
+            prisma.budget.count({ where: recentFilter }),
+            prisma.transaction.count(),
+            prisma.transaction.count({ where: recentFilter }),
+            prisma.savingsGoal.count(),
+            prisma.recurringTransaction.count(),
+            prisma.user.findMany({ select: { createdAt: true } }),
+            prisma.transaction.findMany({ select: { createdAt: true } }),
+            prisma.account.findMany({ select: { createdAt: true } }),
+        ]);
+        return {
+            users: { total: userCount, recent: userRecent },
+            accounts: { total: accountCount, recent: accountRecent },
+            budgets: { total: budgetCount, recent: budgetRecent },
+            transactions: { total: transactionCount, recent: transactionRecent },
+            goals: { total: goalCount },
+            recurring: { total: recurringCount },
+            monthlyUsers: bucketByMonth(userDates.map((u) => u.createdAt), 6),
+            monthlyTransactions: bucketByMonth(transactionDates.map((t) => t.createdAt), 6),
+            monthlyAccounts: bucketByMonth(accountDates.map((a) => a.createdAt), 6),
+        };
+    } catch (error) {
+        console.error("Erreur lors de la récupération des statistiques : ", error);
+        throw error;
+    }
 }
 
 async function assertBudgetOwner(budgetId: string, email: string) {

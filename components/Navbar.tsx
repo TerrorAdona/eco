@@ -1,8 +1,8 @@
 "use client";
-import { checkAndAddUser } from "@/app/action";
+import { checkAndAddUser, getMyRole } from "@/app/action";
 import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 function LeafIcon() {
     return (
@@ -24,12 +24,19 @@ function LeafIcon() {
 
 const Navbar = () => {
     const { isLoaded, isSignedIn, user } = useUser();
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
     useEffect(() => {
         if (user?.primaryEmailAddress?.emailAddress) {
             checkAndAddUser(user?.primaryEmailAddress?.emailAddress)
         }
-    }, [user])
+        if (!isSignedIn) return
+        let active = true
+        getMyRole()
+            .then((role) => { if (active) setIsAdmin(role === "ADMIN") })
+            .catch(() => { if (active) setIsAdmin(false) })
+        return () => { active = false }
+    }, [user, isSignedIn])
 
     return (
         <div className="navbar bg-base-200/30 px-5 md:px-[10%] py-4">
@@ -55,6 +62,9 @@ const Navbar = () => {
                                     <Link href={"/transferts"} className="btn btn-ghost btn-sm">Transferts</Link>
                                     <Link href={"/recurrents"} className="btn btn-ghost btn-sm">Récurrents</Link>
                                     <Link href={"/dashboard"} className="btn btn-ghost btn-sm">Tableau de bord</Link>
+                                    {isAdmin && (
+                                        <Link href={"/admin"} className="btn btn-ghost btn-sm">Administration</Link>
+                                    )}
                                 </div>
                                 <UserButton />
                             </div>
@@ -72,6 +82,9 @@ const Navbar = () => {
                                         <li><Link href={"/transferts"}>Transferts</Link></li>
                                         <li><Link href={"/recurrents"}>Récurrents</Link></li>
                                         <li><Link href={"/dashboard"}>Tableau de bord</Link></li>
+                                        {isAdmin && (
+                                            <li><Link href={"/admin"}>Administration</Link></li>
+                                        )}
                                     </ul>
                                 </div>
                             </div>
