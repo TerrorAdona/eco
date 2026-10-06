@@ -1,10 +1,10 @@
 "use client"
 
-import Wrapper from '@/components/Wrapper'
 import Notification from '@/components/Notification'
 import { getAdminStatistics } from '@/app/action'
 import { ADMIN_PERIODS, AdminPeriod } from '@/lib/admin-stats'
 import Link from 'next/link'
+import { useUser } from '@clerk/nextjs'
 import React, { useCallback, useEffect, useState } from 'react'
 
 type AdminStatistics = Awaited<ReturnType<typeof getAdminStatistics>>;
@@ -24,6 +24,7 @@ const KIND_LABELS: Record<string, string> = {
 const PIE_COLORS = ["#5e81ac", "#88c0d0", "#a3be8c"];
 
 const Page = () => {
+    const { user } = useUser()
     const [period, setPeriod] = useState<AdminPeriod>("last30")
     const [stats, setStats] = useState<AdminStatistics | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
@@ -33,15 +34,20 @@ const Page = () => {
     }
 
     const fetchStats = useCallback(async () => {
+        const email = user?.primaryEmailAddress?.emailAddress ?? ""
+        if (!email) {
+            setLoading(false)
+            return
+        }
         setLoading(true)
         try {
-            setStats(await getAdminStatistics(period))
+            setStats(await getAdminStatistics(email, period))
         } catch (error: unknown) {
             setNotification(error instanceof Error ? `Erreur : ${error.message}` : "Erreur lors du chargement")
         } finally {
             setLoading(false)
         }
-    }, [period])
+    }, [user?.primaryEmailAddress?.emailAddress, period])
 
     useEffect(() => {
         fetchStats()
@@ -62,7 +68,7 @@ const Page = () => {
         : "conic-gradient(var(--color-base-300) 0deg 360deg)";
 
     return (
-        <Wrapper>
+        <>
             {notification && (
                 <Notification message={notification} onClose={closeNotification} />
             )}
@@ -278,7 +284,7 @@ const Page = () => {
                     </div>
                 </div>
             )}
-        </Wrapper>
+        </>
     )
 }
 

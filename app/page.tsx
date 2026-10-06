@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { checkAndAddUser, getMyRole } from "@/app/action";
 import Navbar from "@/components/Navbar";
 import budgets from "@/components/data";
 import BudgetItem from "@/components/BudgetItem";
@@ -65,7 +68,17 @@ const STEPS = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
+  if (userId) {
+    const user = await currentUser();
+    const email = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress;
+    if (email) {
+      await checkAndAddUser(email);
+      const role = await getMyRole(email);
+      redirect(role === "ADMIN" ? "/admin" : "/dashboard");
+    }
+  }
   return (
     <div>
       <Navbar />

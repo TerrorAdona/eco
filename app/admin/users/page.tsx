@@ -1,9 +1,9 @@
 "use client"
 
-import Wrapper from '@/components/Wrapper'
 import Notification from '@/components/Notification'
 import { getAdminUsers, setUserActive, setUserRole } from '@/app/action'
 import Link from 'next/link'
+import { useUser } from '@clerk/nextjs'
 import React, { useCallback, useEffect, useState } from 'react'
 
 interface AdminUserRow {
@@ -15,6 +15,7 @@ interface AdminUserRow {
 }
 
 const Page = () => {
+    const { user } = useUser()
     const [users, setUsers] = useState<AdminUserRow[]>([])
     const [search, setSearch] = useState<string>("")
     const [debouncedSearch, setDebouncedSearch] = useState<string>("")
@@ -39,10 +40,17 @@ const Page = () => {
         return () => clearTimeout(timer)
     }, [search])
 
+    const getUserEmail = () => user?.primaryEmailAddress?.emailAddress ?? ""
+
     const fetchUsers = useCallback(async () => {
+        const email = user?.primaryEmailAddress?.emailAddress ?? ""
+        if (!email) {
+            setLoading(false)
+            return
+        }
         setLoading(true)
         try {
-            const data = await getAdminUsers(debouncedSearch || undefined, page)
+            const data = await getAdminUsers(email, debouncedSearch || undefined, page)
             setUsers(data.users.map((u) => ({ ...u, createdAt: new Date(u.createdAt) })))
             setTotal(data.total)
             setTotalPages(data.totalPages)
@@ -51,7 +59,7 @@ const Page = () => {
         } finally {
             setLoading(false)
         }
-    }, [debouncedSearch, page])
+    }, [user?.primaryEmailAddress?.emailAddress, debouncedSearch, page])
 
     useEffect(() => {
         fetchUsers()
@@ -64,7 +72,9 @@ const Page = () => {
             return
         }
         try {
-            await setUserRole(userId, role)
+            const sessionEmail = getUserEmail()
+            if (!sessionEmail) throw new Error("Utilisateur non trouvé")
+            await setUserRole(sessionEmail, userId, role)
             setNotification("Rôle modifié avec succès")
             await fetchUsers()
         } catch (error: unknown) {
@@ -81,7 +91,9 @@ const Page = () => {
         )
         if (!confirmed) return
         try {
-            await setUserActive(userId, !isActive)
+            const sessionEmail = getUserEmail()
+            if (!sessionEmail) throw new Error("Utilisateur non trouvé")
+            await setUserActive(sessionEmail, userId, !isActive)
             setNotification(isActive ? "Utilisateur désactivé" : "Utilisateur réactivé")
             await fetchUsers()
         } catch (error: unknown) {
@@ -90,7 +102,7 @@ const Page = () => {
     }
 
     return (
-        <Wrapper>
+        <>
             {notification && (
                 <Notification message={notification} onClose={closeNotification} />
             )}
@@ -194,7 +206,7 @@ const Page = () => {
                     </>
                 )}
             </div>
-        </Wrapper>
+        </>
     )
 }
 

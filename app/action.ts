@@ -5,7 +5,7 @@ import { normalizeRecurringType, normalizeTransactionCategory, normalizeUserRole
 import { sumExpenses } from "@/lib/budget-alerts"
 import { accountInputSchema, accountUpdateSchema, budgetInputSchema, budgetUpdateSchema, contributionSchema, parseOrThrow, recurringInputSchema, recurringUpdateSchema, savingsGoalInputSchema, savingsGoalUpdateSchema, topUpSchema, transactionInputSchema, transactionUpdateSchema, transferInputSchema, transferUpdateSchema } from "@/lib/validators"
 import { ADMIN_PERIODS, AdminPeriod, bucketByMonth, bucketByTime } from "@/lib/admin-stats"
-import { auth, clerkClient, currentUser } from "@clerk/nextjs/server"
+import { clerkClient } from "@clerk/nextjs/server"
 
 async function getUserOrThrow(email: string) {
     if (!email) throw new Error("Utilisateur non trouvé")
@@ -23,23 +23,8 @@ export async function assertAdmin(email: string) {
     return user;
 }
 
-async function getAdminEmail(): Promise<string> {
-    let userId: string | null = null;
+export async function getMyRole(email: string): Promise<string> {
     try {
-        ({ userId } = await auth());
-    } catch {
-        throw new Error("Non authentifié");
-    }
-    if (!userId) throw new Error("Non authentifié");
-    const user = await currentUser();
-    const email = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress;
-    if (!email) throw new Error("Utilisateur non trouvé");
-    return email;
-}
-
-export async function getMyRole(): Promise<string> {
-    try {
-        const email = await getAdminEmail();
         const user = await getUserOrThrow(email);
         return normalizeUserRole(user.role);
     } catch (error) {
@@ -48,9 +33,8 @@ export async function getMyRole(): Promise<string> {
     }
 }
 
-export async function getAdminStats() {
+export async function getAdminStats(email: string) {
     try {
-        const email = await getAdminEmail();
         await assertAdmin(email);
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -112,9 +96,8 @@ async function findClerkUserIdByEmail(email: string): Promise<string | null> {
     }
 }
 
-export async function getAdminUsers(search?: string, page?: number) {
+export async function getAdminUsers(email: string, search?: string, page?: number) {
     try {
-        const email = await getAdminEmail();
         await assertAdmin(email);
         const query = search?.trim() ?? "";
         const pageSize = 10;
@@ -143,9 +126,8 @@ export async function getAdminUsers(search?: string, page?: number) {
     }
 }
 
-export async function getAdminStatistics(period?: string) {
+export async function getAdminStatistics(email: string, period?: string) {
     try {
-        const email = await getAdminEmail();
         await assertAdmin(email);
         const config = (period && period in ADMIN_PERIODS
             ? ADMIN_PERIODS[period as AdminPeriod]
@@ -249,9 +231,8 @@ export async function getAdminStatistics(period?: string) {
     }
 }
 
-export async function getAdminUserDetail(userId: string) {
+export async function getAdminUserDetail(email: string, userId: string) {
     try {
-        const email = await getAdminEmail();
         await assertAdmin(email);
         if (!userId) throw new Error("Utilisateur non trouvé");
         const user = await prisma.user.findUnique({
@@ -285,9 +266,8 @@ export async function getAdminUserDetail(userId: string) {
     }
 }
 
-export async function setUserRole(targetUserId: string, role: string) {
+export async function setUserRole(email: string, targetUserId: string, role: string) {
     try {
-        const email = await getAdminEmail();
         await assertAdmin(email);
         if (!(USER_ROLES as readonly string[]).includes(role)) throw new Error("Rôle invalide");
         const target = await prisma.user.findUnique({ where: { id: targetUserId } });
@@ -305,9 +285,8 @@ export async function setUserRole(targetUserId: string, role: string) {
     }
 }
 
-export async function setUserActive(targetUserId: string, isActive: boolean) {
+export async function setUserActive(email: string, targetUserId: string, isActive: boolean) {
     try {
-        const email = await getAdminEmail();
         const sessionUser = await assertAdmin(email);
         if (typeof isActive !== "boolean") throw new Error("Statut invalide");
         const target = await prisma.user.findUnique({ where: { id: targetUserId } });

@@ -30,9 +30,10 @@ const Navbar = () => {
         if (user?.primaryEmailAddress?.emailAddress) {
             checkAndAddUser(user?.primaryEmailAddress?.emailAddress)
         }
-        if (!isSignedIn) return
+        const email = user?.primaryEmailAddress?.emailAddress
+        if (!isSignedIn || !email) return
         let active = true
-        getMyRole()
+        getMyRole(email)
             .then((role) => { if (active) setIsAdmin(role === "ADMIN") })
             .catch(() => { if (active) setIsAdmin(false) })
         return () => { active = false }

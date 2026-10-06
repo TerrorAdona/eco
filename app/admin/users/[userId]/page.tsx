@@ -1,9 +1,9 @@
 "use client"
 
-import Wrapper from '@/components/Wrapper'
 import Notification from '@/components/Notification'
 import { getAdminUserDetail, setUserActive, setUserRole } from '@/app/action'
 import Link from 'next/link'
+import { useUser } from '@clerk/nextjs'
 import React, { useCallback, useEffect, useState } from 'react'
 
 interface AdminUserDetail {
@@ -18,6 +18,7 @@ interface AdminUserDetail {
 }
 
 const Page = ({ params }: { params: Promise<{ userId: string }> }) => {
+    const { user } = useUser()
     const [userId, setUserId] = useState<string>("")
     const [detail, setDetail] = useState<AdminUserDetail | null>(null)
     const [loading, setLoading] = useState<boolean>(true)
@@ -31,11 +32,18 @@ const Page = ({ params }: { params: Promise<{ userId: string }> }) => {
         return error instanceof Error ? `${fallback} : ${error.message}` : fallback
     }
 
+    const getUserEmail = () => user?.primaryEmailAddress?.emailAddress ?? ""
+
     const fetchDetail = useCallback(async (id: string) => {
+        const sessionEmail = user?.primaryEmailAddress?.emailAddress ?? ""
+        if (!sessionEmail) {
+            setLoading(false)
+            return
+        }
         setLoading(true)
         setNotFound(false)
         try {
-            const data = await getAdminUserDetail(id)
+            const data = await getAdminUserDetail(sessionEmail, id)
             setDetail({ ...data, createdAt: new Date(data.createdAt) })
         } catch (error: unknown) {
             if (error instanceof Error && error.message === "Utilisateur non trouvé") {
@@ -46,7 +54,7 @@ const Page = ({ params }: { params: Promise<{ userId: string }> }) => {
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [user?.primaryEmailAddress?.emailAddress])
 
     useEffect(() => {
         const load = async () => {
@@ -65,7 +73,9 @@ const Page = ({ params }: { params: Promise<{ userId: string }> }) => {
             return
         }
         try {
-            await setUserRole(detail.id, role)
+            const sessionEmail = getUserEmail()
+            if (!sessionEmail) throw new Error("Utilisateur non trouvé")
+            await setUserRole(sessionEmail, detail.id, role)
             setNotification("Rôle modifié avec succès")
             await fetchDetail(userId)
         } catch (error: unknown) {
@@ -83,7 +93,9 @@ const Page = ({ params }: { params: Promise<{ userId: string }> }) => {
         )
         if (!confirmed) return
         try {
-            await setUserActive(detail.id, !detail.isActive)
+            const sessionEmail = getUserEmail()
+            if (!sessionEmail) throw new Error("Utilisateur non trouvé")
+            await setUserActive(sessionEmail, detail.id, !detail.isActive)
             setNotification(detail.isActive ? "Utilisateur désactivé" : "Utilisateur réactivé")
             await fetchDetail(userId)
         } catch (error: unknown) {
@@ -92,7 +104,7 @@ const Page = ({ params }: { params: Promise<{ userId: string }> }) => {
     }
 
     return (
-        <Wrapper>
+        <>
             {notification && (
                 <Notification message={notification} onClose={closeNotification} />
             )}
@@ -161,7 +173,7 @@ const Page = ({ params }: { params: Promise<{ userId: string }> }) => {
                     <p className="text-xs text-base-content/50">Activité générale uniquement — aucun montant ni détail financier affiché.</p>
                 </div>
             )}
-        </Wrapper>
+        </>
     )
 }
 

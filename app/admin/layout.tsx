@@ -1,21 +1,50 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { assertAdmin } from "@/app/action";
+"use client";
 
-export default async function AdminLayout({
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getMyRole } from "@/app/action";
+import AdminShell from "@/components/admin/AdminShell";
+
+export default function AdminLayout({
     children,
 }: Readonly<{
     children: React.ReactNode
 }>) {
-    const { userId } = await auth();
-    if (!userId) redirect("/sign-in");
-    const user = await currentUser();
-    const email = user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses[0]?.emailAddress;
-    if (!email) redirect("/sign-in");
-    try {
-        await assertAdmin(email);
-    } catch {
-        redirect("/");
+    const { isLoaded, isSignedIn, user } = useUser();
+    const router = useRouter();
+    const [allowed, setAllowed] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+        const email = user?.primaryEmailAddress?.emailAddress ?? "";
+        if (!isSignedIn || !email) {
+            router.replace("/sign-in");
+            return;
+        }
+        let active = true;
+        getMyRole(email)
+            .then((role) => {
+                if (!active) return;
+                if (role === "ADMIN") {
+                    setAllowed(true);
+                } else {
+                    router.replace("/");
+                }
+            })
+            .catch(() => {
+                if (active) router.replace("/");
+            });
+        return () => { active = false; };
+    }, [isLoaded, isSignedIn, user, router]);
+
+    if (!allowed) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <span className="loading loading-bars loading-lg"></span>
+            </div>
+        );
     }
-    return <>{children}</>;
+
+    return <AdminShell>{children}</AdminShell>;
 }
