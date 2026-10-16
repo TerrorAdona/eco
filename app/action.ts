@@ -470,12 +470,7 @@ function balanceEffect(type: string | null | undefined, amount: number): number 
     return normalizeRecurringType(type ?? undefined) === "REVENU" ? amount : -amount
 }
 
-export async function addTransactionToBudget(
-    budgetId: string,
-    amount: number,
-    description: string,
-    email: string,
-    category?: string,
+export async function addTransactionToBudget(budgetId: string, amount: number, description: string, email: string, category?: string,
     accountId?: string | null,
     type?: string
 ) {
