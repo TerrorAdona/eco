@@ -23,17 +23,20 @@ const nonNegativeAmount = (message: string) =>
 
 const lenientCategory = z.string().optional().transform((v) => normalizeTransactionCategory(v));
 
+const budgetCategory = z.string().trim().min(1, "Catégorie requise").max(30, "Catégorie trop longue (30 caractères maximum)");
+
 const requiredDate = (requiredMessage: string, invalidMessage: string) =>
     z.string().trim().min(1, requiredMessage).refine((s) => !Number.isNaN(new Date(s).getTime()), invalidMessage);
 
 export const budgetInputSchema = z.object({
     name: requiredName("Nom du budget", 60),
     amount: positiveAmount("Montant invalide"),
-    category: lenientCategory,
+    category: budgetCategory,
 });
 
 export const budgetUpdateSchema = budgetInputSchema.extend({
     budgetId: z.string().min(1, "Budget non trouvé"),
+    category: budgetCategory.optional(),
 });
 
 export const transactionInputSchema = z.object({

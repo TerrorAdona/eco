@@ -2,7 +2,7 @@
 import { TRANSACTION_CATEGORIES, Transaction } from '@/type'
 import { useUser } from '@clerk/nextjs'
 import React, { useEffect, useState } from 'react'
-import { getBudgetOptions, getTransactionsByEmailAndPeriod, TransactionFilters } from '../action'
+import { getBudgetOptions, getCategoryOptions, getTransactionsByEmailAndPeriod, TransactionFilters } from '../action'
 import { csvFilename, downloadCsv, transactionsToCsv } from '@/lib/csv'
 import Wrapper from '@/components/Wrapper'
 import TransactionItem from '@/components/TransactionItem'
@@ -13,6 +13,7 @@ const Page = () => {
     const { user } = useUser()
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [budgetOptions, setBudgetOptions] = useState<{ id: string; name: string }[]>([])
+    const [customCategories, setCustomCategories] = useState<string[]>([])
     const [loading, setLoading] = useState<boolean>(true)
     const [period, setPeriod] = useState<string>("last30")
     const [search, setSearch] = useState<string>("")
@@ -37,7 +38,12 @@ const Page = () => {
         }
         const loadOptions = async () => {
             try {
-                setBudgetOptions(await getBudgetOptions(userEmail))
+                const [budgets, categories] = await Promise.all([
+                    getBudgetOptions(userEmail),
+                    getCategoryOptions(userEmail),
+                ])
+                setBudgetOptions(budgets)
+                setCustomCategories(categories.filter((c) => !(TRANSACTION_CATEGORIES as readonly string[]).includes(c)))
             } catch (error) {
                 console.error("Erreur lors de la récupération des budgets ", error);
             }
@@ -104,6 +110,9 @@ const Page = () => {
                     <option value="all">Toutes catégories</option>
                     {TRANSACTION_CATEGORIES.map((c) => (
                         <option key={c} value={c}>{c}</option>
+                    ))}
+                    {customCategories.map((c) => (
+                        <option key={`custom-${c}`} value={c}>{c}</option>
                     ))}
                 </select>
                 <select

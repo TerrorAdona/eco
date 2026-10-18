@@ -120,7 +120,7 @@ function SpendingCard() {
           −12 %
         </span>
       </div>
-      <p className="mt-1.5 text-2xl font-bold text-white">1 240 €</p>
+      <p className="mt-1.5 text-2xl font-bold text-white">1 240 000 Ar</p>
       <svg viewBox="0 0 210 84" className="mt-4 w-full" aria-hidden="true">
         <g stroke="#ffffff" strokeOpacity="0.08" strokeWidth="1">
           <line x1="0" y1="21" x2="210" y2="21" />

@@ -25,10 +25,16 @@ export type TransactionCategory = typeof TRANSACTION_CATEGORIES[number];
 
 export const DEFAULT_TRANSACTION_CATEGORY: TransactionCategory = "Autres";
 
-export function normalizeTransactionCategory(value: string | null | undefined): TransactionCategory {
-    return (TRANSACTION_CATEGORIES as readonly string[]).includes(value ?? "")
-        ? (value as TransactionCategory)
-        : DEFAULT_TRANSACTION_CATEGORY;
+export const CUSTOM_CATEGORY_VALUE = "__custom";
+
+export function normalizeTransactionCategory(value: string | null | undefined): string {
+    const trimmed = (value ?? "").trim();
+    return trimmed === "" ? DEFAULT_TRANSACTION_CATEGORY : trimmed;
+}
+
+export function isCustomCategory(value: string | null | undefined): boolean {
+    const trimmed = (value ?? "").trim();
+    return trimmed !== "" && !(TRANSACTION_CATEGORIES as readonly string[]).includes(trimmed);
 }
 
 export interface Transaction {

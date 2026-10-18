@@ -2,7 +2,7 @@
 import { addTransactionToBudget, deleteBudget, deleteTransaction, getAccounts, getTransactionByBudgetId, updateBudget, updateTransaction } from '@/app/action'
 import BudgetItem from '@/components/BudgetItem'
 import Wrapper from '@/components/Wrapper'
-import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeRecurringType, normalizeTransactionCategory, RECURRING_TYPE_LABELS, RECURRING_TYPES, TRANSACTION_CATEGORIES, Transaction } from '@/type'
+import { Budget, CUSTOM_CATEGORY_VALUE, DEFAULT_TRANSACTION_CATEGORY, isCustomCategory, normalizeRecurringType, normalizeTransactionCategory, RECURRING_TYPE_LABELS, RECURRING_TYPES, TRANSACTION_CATEGORIES, Transaction } from '@/type'
 import { formatMoney, suggestSufficientAccounts } from '@/lib/money'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
@@ -25,6 +25,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
     const [editName, setEditName] = useState<string>('')
     const [editAmount, setEditAmount] = useState<string>('')
     const [editCategory, setEditCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
+    const [editCustomCategory, setEditCustomCategory] = useState<string>("")
     const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null)
     const closeNotification = () => {
         setNotification("")
@@ -157,7 +158,13 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
         if (!budget) return
         setEditName(budget.name)
         setEditAmount(String(budget.amount))
-        setEditCategory(normalizeTransactionCategory(budget.category))
+        if (isCustomCategory(budget.category)) {
+            setEditCategory(CUSTOM_CATEGORY_VALUE)
+            setEditCustomCategory(budget.category)
+        } else {
+            setEditCategory(normalizeTransactionCategory(budget.category))
+            setEditCustomCategory("")
+        }
         setShowEditBudget(true)
     }
 
@@ -177,7 +184,7 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                 setNotification("Veuillez entrer un montant valide")
                 return
             }
-            await updateBudget(email, budgetId, editName, amountNumber, editCategory)
+            await updateBudget(email, budgetId, editName, amountNumber, editCategory === CUSTOM_CATEGORY_VALUE ? editCustomCategory : editCategory)
             setNotification("Budget modifié avec succès")
             setShowEditBudget(false)
             fetchBudgetData(budgetId, email)
@@ -249,7 +256,18 @@ const Page = ({ params }: { params: Promise<{ budgetId: string }> }) => {
                                             {TRANSACTION_CATEGORIES.map((c) => (
                                                 <option key={c} value={c}>{c}</option>
                                             ))}
+                                            <option value={CUSTOM_CATEGORY_VALUE}>＋ Autre (personnalisée)</option>
                                         </select>
+                                        {editCategory === CUSTOM_CATEGORY_VALUE && (
+                                            <input
+                                                type="text"
+                                                value={editCustomCategory}
+                                                onChange={(e) => setEditCustomCategory(e.target.value)}
+                                                placeholder="Nom de la catégorie"
+                                                maxLength={30}
+                                                className="input input-bordered w-full"
+                                            />
+                                        )}
                                         <div className="flex gap-2">
                                             <button onClick={handleUpdateBudget} className="btn btn-primary flex-1">
                                                 Enregistrer

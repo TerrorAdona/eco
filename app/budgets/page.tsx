@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BUDGET_ALERT_LABELS, getBudgetAlert, hasBudgetAlert, sumExpenses } from '@/lib/budget-alerts'
 import { addBudget, deleteBudget, getBudgetsByUser, updateBudget } from '../action'
 import Notification from '@/components/Notification'
-import { Budget, DEFAULT_TRANSACTION_CATEGORY, normalizeTransactionCategory, TRANSACTION_CATEGORIES } from '@/type'
+import { Budget, CUSTOM_CATEGORY_VALUE, DEFAULT_TRANSACTION_CATEGORY, isCustomCategory, normalizeTransactionCategory, TRANSACTION_CATEGORIES } from '@/type'
 import Link from 'next/link'
 import BudgetItem from '@/components/BudgetItem'
 import { HandCoins } from 'lucide-react'
@@ -17,6 +17,7 @@ const Page = () => {
     const [budgetName, setBudgetName] = useState<string>("")
     const [budgetAmount, setBudgetAmount] = useState<string>("")
     const [budgetCategory, setBudgetCategory] = useState<string>(DEFAULT_TRANSACTION_CATEGORY)
+    const [customCategory, setCustomCategory] = useState<string>("")
     const [budgets, setBudgets] = useState<Budget[]>([])
     const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null)
 
@@ -31,7 +32,12 @@ const Page = () => {
         setBudgetName("")
         setBudgetAmount("")
         setBudgetCategory(DEFAULT_TRANSACTION_CATEGORY)
+        setCustomCategory("")
         setEditingBudgetId(null)
+    }
+
+    const effectiveCategory = () => {
+        return budgetCategory === CUSTOM_CATEGORY_VALUE ? customCategory : budgetCategory
     }
 
     const closeModal = () => {
@@ -48,7 +54,13 @@ const Page = () => {
     const openEditModal = (budget: Budget) => {
         setBudgetName(budget.name)
         setBudgetAmount(String(budget.amount))
-        setBudgetCategory(normalizeTransactionCategory(budget.category))
+        if (isCustomCategory(budget.category)) {
+            setBudgetCategory(CUSTOM_CATEGORY_VALUE)
+            setCustomCategory(budget.category)
+        } else {
+            setBudgetCategory(normalizeTransactionCategory(budget.category))
+            setCustomCategory("")
+        }
         setEditingBudgetId(budget.id)
         const modal = document.getElementById("my_modal_3") as HTMLDialogElement | null
         modal?.showModal()
@@ -105,10 +117,10 @@ const Page = () => {
             if (!budgetName.trim()) throw new Error("Nom du budget requis")
 
             if (editingBudgetId) {
-                await updateBudget(email, editingBudgetId, budgetName, amount, budgetCategory)
+                await updateBudget(email, editingBudgetId, budgetName, amount, effectiveCategory())
                 setNotification("Budget modifié avec succès")
             } else {
-                await addBudget(email, budgetName, amount, budgetCategory)
+                await addBudget(email, budgetName, amount, effectiveCategory())
                 setNotification("Budget ajouté avec succès")
             }
 
@@ -160,7 +172,12 @@ const Page = () => {
                                 {TRANSACTION_CATEGORIES.map((c) => (
                                     <option key={c} value={c}>{c}</option>
                                 ))}
+                                <option value={CUSTOM_CATEGORY_VALUE}>＋ Autre (personnalisée)</option>
                             </select>
+
+                            {budgetCategory === CUSTOM_CATEGORY_VALUE && (
+                                <input type="text" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder='Nom de la catégorie' maxLength={30} className='w-full input input-bordered mb-3' required />
+                            )}
 
                             <button
                             className='btn btn-primary mt-3'

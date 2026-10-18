@@ -1107,6 +1107,22 @@ export interface TransactionFilters {
     maxAmount?: number;
 }
 
+export async function getCategoryOptions(email: string) {
+    try {
+        const user = await getUserOrThrow(email)
+        const budgets = await prisma.budget.findMany({
+            where: { userId: user.id },
+            select: { category: true },
+            distinct: ["category"],
+            orderBy: { category: "asc" }
+        })
+        return budgets.map((b) => b.category)
+    } catch (error) {
+        console.error("Erreur lors de la récupération des catégories : ", error)
+        throw error
+    }
+}
+
 export async function getBudgetOptions(email: string) {
     try {
         const user = await getUserOrThrow(email)

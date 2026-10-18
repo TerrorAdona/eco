@@ -106,6 +106,22 @@ describe("topUpSchema", () => {
     });
 });
 
+describe("budget category personnalisée", () => {
+    it("accepte une catégorie libre et la conserve telle quelle", () => {
+        const parsed = parseOrThrow(budgetInputSchema, { name: "X", amount: 100, category: "Voyages" });
+        expect(parsed.category).toBe("Voyages");
+    });
+
+    it("rejette vide et trop longue", () => {
+        expect(() => parseOrThrow(budgetInputSchema, { name: "X", amount: 100, category: "   " })).toThrow(
+            "Catégorie requise"
+        );
+        expect(() => parseOrThrow(budgetInputSchema, { name: "X", amount: 100, category: "C".repeat(31) })).toThrow(
+            "Catégorie trop longue (30 caractères maximum)"
+        );
+    });
+});
+
 describe("contributionSchema", () => {
     it("accepte un versement valide et rejette zéro/négatif", () => {
         expect(parseOrThrow(contributionSchema, { goalId: "abc", amount: 500 }).amount).toBe(500);
@@ -124,10 +140,10 @@ describe("recurringInputSchema", () => {
         ).toThrow("Date de fin invalide");
     });
 
-    it("normalise catégorie, type et fréquence inconnus", () => {
-        const parsed = parseOrThrow(recurringInputSchema, { description: "X", amount: 10, type: "??", category: "??", frequency: "??", startDate: "2026-09-01" });
+    it("normalise type et fréquence inconnus, conserve la catégorie telle quelle", () => {
+        const parsed = parseOrThrow(recurringInputSchema, { description: "X", amount: 10, type: "??", category: "Voyages", frequency: "??", startDate: "2026-09-01" });
         expect(parsed.type).toBe("DEPENSE");
-        expect(parsed.category).toBe("Autres");
+        expect(parsed.category).toBe("Voyages");
         expect(parsed.frequency).toBe("MONTHLY");
     });
 });
